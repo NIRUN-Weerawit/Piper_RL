@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot name="Cube_01">
+  <link name="Root">
+    <visual>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <geometry>
+        <box size="1. 1. 1."/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <geometry>
+        <box size="1. 1. 1."/>
+      </geometry>
+    </collision>
+  </link>
+</robot>
