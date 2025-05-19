@@ -1,6 +1,7 @@
 # This python file includes the training and testing functions for the GRL model
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
+import time
 
 def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir, debug, gym_instance, warmup, warmup_step):
     """
@@ -49,6 +50,7 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
     # obs = env.reset() #initial state
     # obs = [goal_position (3), goal_orientation (4), end_effector_position (3), end_effector_orientation (4)]
     print("#-----------------START WARMING UP-----------------#")
+    time_0 = time.time()
     while t_warmup < warmup: 
         gym_instance.step_physics()
         t_now = gym.get_sim_time(sim)
@@ -78,7 +80,7 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
             obs_next, reward, done = gym_instance.step(combined_action)   #obs_next, reward, done, info 
             
             t_warmup += 1
-            if t_warmup % warmup_step == 0: reward -= 1000
+            if t_warmup % warmup_step == 0: reward -= 200
             R_warmup += reward
             
             # ------Storage of interaction results in the experience replay pool------ #
@@ -101,7 +103,9 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
                 gym_instance.reset() 
                 # combined_action = [0.0] * 6
                 previous_action = [0.0] * 6
-                print(f"#----STAT: fail= {fail}, success= {success}, total= {fail+success}")
+                print(f"#----STAT: fail= {fail}, success= {success}, total= {fail+success}, time={time.time() - time_0}")
+                time_0 = time.time()
+                
         else:
             gym_instance.render()
         # print(f"t= {t}")
@@ -115,7 +119,8 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
             # combined_action = [0.0] * 6
             previous_action = [0.0] * 6
             done = False
-            print(f"#----STAT: fail= {fail}, success= {success}, total= {fail+success}")
+            print(f"#----STAT: fail= {fail}, success= {success}, total= {fail+success}, time={time.time() - time_0}")
+            time_0 = time.time()
         
             
     print("#-----------------FINISHED WARMING UP, EPISODE 1 STARTS-----------------#")
@@ -146,6 +151,8 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
         # obs = [goal_position (3), goal_orientation (4), end_effector_position (3), end_effector_orientation (4)]
         R = 0
         t = 0
+        time_0 = time.time()
+        time_ep = time.time()
         while True:
             # ------Action generation------ #
             gym_instance.step_physics()        
@@ -172,6 +179,8 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
                 if t % 200 == 0: 
                     print(f"time_step= {t}, combined_action = {combined_action * 0.02}")
                     print(f"action = {action}")
+                    print("time 200 steps: ", time.time() - time_0)
+                    time_0 = time.time()
                 # print("action", combined_action)
                 # print(',    '.join(f'{q:.2f}' for q in action))
                 obs_next, reward, done = gym_instance.step(combined_action)   #obs_next, reward, done, info 
@@ -179,7 +188,7 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
                 
                 R += reward
                 t += 1
-                if t >= max_episode_len: reward -= 1000
+                if t >= max_episode_len: reward -= 200
                 # ------Storage of interaction results in the experience replay pool------ #
                 GRL_model.store_transition(obs, action, reward, obs_next, done)
                 
@@ -206,7 +215,7 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
             # reset = t == max_episode_len
             # if reset or done:
             #     break
-            
+        print("Total time ep.", i ," = ", time.time() - time_ep)
         # ------ records training data ------ #
         # Get the training data
         training_data = GRL_model.get_statistics()

@@ -61,8 +61,8 @@ args = dict(sim_device          = "cuda:0",
             explore_noise               = 0.3,
             gamma                       = 0.99,
             batch_size                  = 128,  # batch_size
-            update_interval             = 20,  # model update interval (< actor model) 100
-            update_interval_actor       = 40,  # actor model update interval 500
+            update_interval             = 1,  # model update interval (< actor model) 100
+            update_interval_actor       = 2,  # actor model update interval 500
             target_update_interval      = 100,  # target model update interval 5000
             soft_update_tau             = 0.001,  # soft update factor
             n_steps                     = 1,
