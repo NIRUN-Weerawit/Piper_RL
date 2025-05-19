@@ -1,13 +1,13 @@
 """Contains an experiment class for running simulations."""
 
-from RL_Utils.create_env import Gym_env
+from RL_Utils.create_env_server import Gym_env
 import datetime
 import logging
 import time
 import os
 import numpy as np
 import json
-
+from RL_Utils.storagemanager import StorageManager 
 
 class Experiment:
 
@@ -42,6 +42,9 @@ class Experiment:
         self.action_min = [-1] * 6
         self.action_max = [1] * 6
         
+        self.sm = StorageManager("TD3", "", 0, 'cuda:0')
+        self.sm.new_session_dir()
+        
         
         #TODO: define  self.env
 
@@ -62,7 +65,7 @@ class Experiment:
 
         # Initialize GRL models
         # num_envs = num_envs
-        N = 33   #gripper_pose : A list of end-effector transformation including position and orientation: [(x, y, z), (x, y, z, w)]
+        N = 21   #gripper_pose : A list of end-effector transformation including position and orientation: [(x, y, z), (x, y, z, w)]
                 #SHOULD BE GOAL_POSE INIT?   [goal_position, goal_orientation, end_effector_position, end_effector_orientation, end_effector_velocity]
         A = 6   #joints_angle : A list of joints' angle: [j1, j2, j3, j4, j5, j6, j7, j8]
         
@@ -83,7 +86,7 @@ class Experiment:
 
         # Initialize optimizer
         lr_critic   = 0.0005
-        lr_actor    = 0.0002
+        lr_actor    = 0.0001
         actor_optimizer = torch.optim.Adam(actor.parameters(), lr=lr_actor)  # 需要定义学习率
         critic_optimizer_1 = torch.optim.Adam(critic_1.parameters(), lr=lr_critic)  # 需要定义学习率
         critic_optimizer_2 = torch.optim.Adam(critic_2.parameters(), lr=lr_critic)  # 需要定义学习率
@@ -108,9 +111,9 @@ class Experiment:
             warmup,  # warmup
             replay_buffer,  # replay buffer
             batch_size=128,  # batch_size
-            update_interval=50,  # model update interval (< actor model) 100
-            update_interval_actor=100,  # actor model update interval 500
-            target_update_interval=400,  # target model update interval 5000
+            update_interval=20,  # model update interval (< actor model) 100
+            update_interval_actor=40,  # actor model update interval 500
+            target_update_interval=100,  # target model update interval 5000
             soft_update_tau=0.001,  # soft update factor
             n_steps=1,  # multi-steps
             gamma=gamma,  # discount factor
@@ -119,8 +122,9 @@ class Experiment:
         )
 
         # Training
-        
-        save_dir = '/home/ucluser/isaacgym/python/examples/RL/RL_TrainedModels/TD3/' + str(run)
+        self.sm.store_model(GRL_TD3)
+        # save_dir = '/home/ucluser/isaacgym/python/examples/RL/RL_TrainedModels/TD3/' + str(run)
+        save_dir = self.sm.session_dir
         print(f"save_dir= {save_dir}")
         # debug_training = True
         if training:
