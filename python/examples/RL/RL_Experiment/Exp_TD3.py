@@ -24,7 +24,27 @@ class Experiment:
             each step to extract information from the env and it will be stored
             in a dict keyed by the str.
         """
-        self.hidden_size = args['hidden_size']
+        self.hidden_size            = args['hidden_size']
+        self.N                      = args['state_size']
+        self.A                      = args['action_size']
+        self.warmup                 = args['warmup']
+        self.lr_critic              = args['lr_critic']
+        self.lr_actor               = args['lr_actor']
+        self.explore_noise          = args['explore_noise']
+        self.gamma                  = args['gamma']
+        self.batch_size             = args['batch_size']
+        self.update_interval        = args['update_interval']
+        self.update_interval_actor  = args['update_interval_actor']
+        self.target_update_interval = args['target_update_interval']
+        self.soft_update_tau        = args['soft_update_tau']
+        self.n_steps                = args['n_steps']
+        self.test_episodes          = args['test_episodes']
+        self.n_episodes             = args['n_episodes']
+        self.max_episode_len        = args['max_episode_len']
+        self.warmup_step            = args['warmup_step']
+        
+        self.action_min             = [-1] * 6
+        self.action_max             = [1] * 6 
         
         self.custom_callables = custom_callables or {}
 
@@ -38,25 +58,16 @@ class Experiment:
         
         # self.action_min = self.gym_instance.piper_lower_limits
         # self.action_max = self.gym_instance.piper_upper_limits
-        
-        self.action_min = [-1] * 6
-        self.action_max = [1] * 6
-        
+
         self.sm = StorageManager("TD3", "", 0, 'cuda:0')
         self.sm.new_session_dir()
+        self.sm.store_config(args)
         
-        
-        #TODO: define  self.env
-
-        # Create the environment.
-        # self.env = create_env()
-
         logging.info(" Starting experiment at {}".format(str(datetime.datetime.now())))
 
         logging.info("Initializing environment.")
 
-    def run(self, num_envs, training, testing, Graph, debug_training, debug_testing, warmup, n_episodes, max_episode_len, warmup_step, run):
-
+    def run(self, num_envs, training, testing, Graph, debug_training, debug_testing):
         import torch
         import torch.nn
         from GRL_Library.common             import replay_buffer
@@ -65,9 +76,9 @@ class Experiment:
 
         # Initialize GRL models
         # num_envs = num_envs
-        N = 21   #gripper_pose : A list of end-effector transformation including position and orientation: [(x, y, z), (x, y, z, w)]
+        N = self.N   #gripper_pose : A list of end-effector transformation including position and orientation: [(x, y, z), (x, y, z, w)]
                 #SHOULD BE GOAL_POSE INIT?   [goal_position, goal_orientation, end_effector_position, end_effector_orientation, end_effector_velocity]
-        A = 6   #joints_angle : A list of joints' angle: [j1, j2, j3, j4, j5, j6, j7, j8]
+        A = self.A   #joints_angle : A list of joints' angle: [j1, j2, j3, j4, j5, j6, j7, j8]
         
         # action_min = torch.tensor(action_min, device=)
         # action_max = torch.tensor(action_max)
@@ -84,21 +95,14 @@ class Experiment:
             critic_1 = NonGraph_Critic_Model(N, A, self.action_min, self.action_max, self.hidden_size)        #.to(device)
             critic_2 = NonGraph_Critic_Model(N, A, self.action_min, self.action_max, self.hidden_size)        #.to(device)
 
-        # Initialize optimizer
-        lr_critic   = 0.0005
-        lr_actor    = 0.0001
-        actor_optimizer = torch.optim.Adam(actor.parameters(), lr=lr_actor)  # 需要定义学习率
-        critic_optimizer_1 = torch.optim.Adam(critic_1.parameters(), lr=lr_critic)  # 需要定义学习率
-        critic_optimizer_2 = torch.optim.Adam(critic_2.parameters(), lr=lr_critic)  # 需要定义学习率
-        # Noisy
-        explore_noise = 0.3
+
+        actor_optimizer = torch.optim.Adam(actor.parameters(), lr=self.lr_actor)  # 需要定义学习率
+        critic_optimizer_1 = torch.optim.Adam(critic_1.parameters(), lr=self.lr_critic)  # 需要定义学习率
+        critic_optimizer_2 = torch.optim.Adam(critic_2.parameters(), lr=self.lr_critic)  # 需要定义学习率
+
         # Replay_buffer
         replay_buffer = replay_buffer.ReplayBuffer(size=10 ** 6)
-        
-        # Discount factor
-        gamma = 0.99
-
-        
+    
         # Initialize GRL agent
         GRL_TD3 = TD3_agent.TD3(
             actor,
@@ -107,16 +111,16 @@ class Experiment:
             critic_optimizer_1,
             critic_2,
             critic_optimizer_2,
-            explore_noise,  # noisy
-            warmup,  # warmup
+            self.explore_noise,  # noisy
+            self.warmup,  # warmup
             replay_buffer,  # replay buffer
-            batch_size=128,  # batch_size
-            update_interval=20,  # model update interval (< actor model) 100
-            update_interval_actor=40,  # actor model update interval 500
-            target_update_interval=100,  # target model update interval 5000
-            soft_update_tau=0.001,  # soft update factor
-            n_steps=1,  # multi-steps
-            gamma=gamma,  # discount factor
+            self.batch_size,  # batch_size
+            self.update_interval,  # model update interval (< actor model) 100
+            self.update_interval_actor,  # actor model update interval 500
+            self.target_update_interval,  # target model update interval 5000
+            self.soft_update_tau,  # soft update factor
+            self.n_steps,  # multi-steps
+            self.gamma,  # discount factor
             model_name="TD3_model",  # model name]
             action_size = A
         )
@@ -128,11 +132,11 @@ class Experiment:
         print(f"save_dir= {save_dir}")
         # debug_training = True
         if training:
-            Training_GRLModels(actor, GRL_TD3, n_episodes, max_episode_len, save_dir, debug_training, self.gym_instance, warmup, warmup_step)
+            Training_GRLModels(actor, GRL_TD3, self.n_episodes, self.max_episode_len, save_dir, debug_training, self.gym_instance, self.warmup, self.warmup_step)
         
         # Testing
-        test_episodes = 10
+        
         load_dir = '/home/ucluser/isaacgym/python/examples/RL/RL_TrainedModels/TD3'
         # debug_testing = False
         if testing:
-            Testing_GRLModels(actor, GRL_TD3, test_episodes, max_episode_len, load_dir, debug_training, self.gym_instance)
+            Testing_GRLModels(actor, GRL_TD3, self.test_episodes, self.max_episode_len, load_dir, debug_training, self.gym_instance)

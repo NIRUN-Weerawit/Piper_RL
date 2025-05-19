@@ -234,14 +234,14 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
         
         print(f"#----STAT: fail= {fail}, success= {success}, total= {fail+success}")
         
-        if i % 100 == 0:
+        if i % 50 == 0:
             # Save model
             GRL_model.save_model(save_dir)
             # Save other data
-            np.save(save_dir + "/Rewards_" + i, Rewards)
-            np.save(save_dir + "/Episode_Steps_", i, Episode_Steps)
-            np.save(save_dir + "/Loss_" + i, Loss)
-            np.save(save_dir + "/Average_Q_" + i, Average_Q)
+            np.save(save_dir + "/Rewards_" + str(i), Rewards)
+            np.save(save_dir + "/Episode_Steps_",  str(i), Episode_Steps)
+            np.save(save_dir + "/Loss_" +  str(i), Loss)
+            np.save(save_dir + "/Average_Q_" +  str(i), Average_Q)
             
     
     print('#-----------------TRAINING FINISHED-----------------#')

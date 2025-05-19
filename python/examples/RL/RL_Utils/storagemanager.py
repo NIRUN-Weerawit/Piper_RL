@@ -1,4 +1,5 @@
 from collections import deque
+import json
 import os
 import io
 import pickle
@@ -71,6 +72,16 @@ class StorageManager:
                     'critic_1_optimizer': model.critic_optimizer_1.state_dict(),
                     'critic_2_optimizer': model.critic_optimizer_2.state_dict(),
                 }, os.path.join(self.session_dir, '_agent.pth'))
+        
+    def store_config(self, config):
+        config_path = os.path.join(self.session_dir, 'config.txt')
+        # config_path_1 = os.path.join(self.session_dir, 'config_.txt')
+        # with open(config_path_1, 'wb') as f:
+        #     f.write(pickle.dumps(config))
+        with open(config_path, 'w') as file:
+            file.write(json.dumps(config))
+            
+        # torch.save(config, config_path)
     # ------------------------------- LOADING -------------------------------
 
     def network_load_weights(self, network, model_dir, episode):

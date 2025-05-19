@@ -34,8 +34,8 @@ HORIZON = 800
 
 num_envs = 1
 
-warmup  = 45000
-run     = 3
+warmup  = 2000
+
 args = dict(sim_device          = "cuda:0",
             pipeline            = "gpu",      #cpu/gpu
             graphics_device_id  = 0,
@@ -49,11 +49,27 @@ args = dict(sim_device          = "cuda:0",
             stiffness           = 1000.0,
             damping             = 200.0,
             debug               = True,
-            headless            = False,
-            debug_interval      = 100,
+            headless            = True,
+            debug_interval      = 200,
             dt                  = 0.01,  #time_step duration for executing command   
             warmup              = warmup,
-            hidden_size         = 256,
+            state_size                  = 21,
+            action_size                 = 6,
+            hidden_size                 = 256,
+            lr_critic                   = 0.0005,
+            lr_actor                    = 0.0001,
+            explore_noise               = 0.3,
+            gamma                       = 0.99,
+            batch_size                  = 128,  # batch_size
+            update_interval             = 20,  # model update interval (< actor model) 100
+            update_interval_actor       = 40,  # actor model update interval 500
+            target_update_interval      = 100,  # target model update interval 5000
+            soft_update_tau             = 0.001,  # soft update factor
+            n_steps                     = 1,
+            test_episodes               = 10,
+            n_episodes                  = 500, 
+            max_episode_len             = 1000, 
+            warmup_step                 = 1000,
 )
 # Boundary of action space
 action_min = [-2.618, 0.0,  -2.697, -1.832, -1.22, -3.14, 0.0, -0.04] #Max. joints' limits
@@ -70,5 +86,4 @@ exp = Experiment(args)
 # run the sumo simulation
 exp.run(num_envs=num_envs,
         training=TRAINING, testing=TESTING,
-        Graph=Enable_Graph, debug_testing= False, debug_training=False,
-        warmup=warmup, n_episodes=200, max_episode_len=400, warmup_step= 1200, run = run)
+        Graph=Enable_Graph, debug_testing= False, debug_training=False)

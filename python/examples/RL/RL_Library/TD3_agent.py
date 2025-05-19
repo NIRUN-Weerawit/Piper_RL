@@ -83,7 +83,7 @@ class TD3(object):
         self.gamma                      = gamma
         self.model_name                 = model_name
         self.action_size                = action_size
-        self.noise                      = OUNoise(action_space=self.action_size, max_sigma=self.explore_noise, min_sigma=0.05, decay_period=400000)
+        self.noise                      = OUNoise(action_space=self.action_size, max_sigma=self.explore_noise, min_sigma=0.05, decay_period=800000)
 
         # target network
         self.actor_model_target = copy.deepcopy(self.actor_model)
@@ -104,7 +104,7 @@ class TD3(object):
 
         self.loss_record = collections.deque(maxlen=100)
         
-        self.writer = SummaryWriter('logs_loss')
+        # self.writer = SummaryWriter('logs_loss')
 
     def store_transition(self, state, action, reward, next_state, done):
         """
@@ -208,9 +208,9 @@ class TD3(object):
         random_action = []
         for i in range(self.action_size):
             # random_action.append(np.clip(np.random.uniform(-1.0, 1.0), -1.0, 1.0)) 
-            random_action.append(np.clip(np.random.uniform(-1.0, 1.0), -1.0, 1.0)) 
-        random_action[1]   = np.clip(np.random.uniform(-1.0, 1.0) + 0.05, -1.0, 1.0)
-        random_action[2]   = np.clip(np.random.uniform(-1.0, 1.0) - 0.025, -1.0, 1.0)
+            random_action.append(np.clip(np.random.normal(scale=1.0), -1.0, 1.0)) 
+        # random_action[1]   = np.clip(np.random.uniform(-1.0, 1.0) + 0.05, -1.0, 1.0)
+        # random_action[2]   = np.clip(np.random.uniform(-1.0, 1.0) - 0.025, -1.0, 1.0)
             
         
         return random_action #[np.clip(np.random.uniform(-1.0, 1.0), -1.0, 1.0)] * self.action_size  
