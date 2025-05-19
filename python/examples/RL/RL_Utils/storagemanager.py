@@ -57,11 +57,14 @@ class StorageManager:
                 for network in networks:
                     self.delete_file(os.path.join(self.session_dir, network.name + '_episode'+str(i)+'.pt'))
                 self.delete_file(os.path.join(self.session_dir,'_episode'+str(i)+'.pkl'))
-
+    #Have problem with pickle unpickleable
+    # def store_model(self, model):
+    #     with open(os.path.join(self.session_dir, '_agent.pkl'), 'wb') as f:
+    #         pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
+    
     def store_model(self, model):
-        with open(os.path.join(self.session_dir, '_agent.pkl'), 'wb') as f:
-            pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
-
+        model_path = os.path.join(self.session_dir, '_agent.pth')
+        torch.save(model.state_dict(), model_path)
     # ------------------------------- LOADING -------------------------------
 
     def network_load_weights(self, network, model_dir, episode):
