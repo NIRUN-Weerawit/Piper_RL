@@ -17,10 +17,10 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
         debug: debug-related model parameters
     """
     # The following is the model training process
-    Rewards = []  # Initialize Reward Matrix for data preservation
-    Loss = []  # Initialize the Loss matrix for data preservation
-    Episode_Steps = []  # Initialize the Steps matrix to hold the number of steps taken at task completion for each episode
-    Average_Q = []  # Initialize the Average Q matrix to hold the average Q value for each episode
+    Rewards         = []  # Initialize Reward Matrix for data preservation
+    Loss            = []  # Initialize the Loss matrix for data preservation
+    Episode_Steps   = []  # Initialize the Steps matrix to hold the number of steps taken at task completion for each episode
+    Average_Q       = []  # Initialize the Average Q matrix to hold the average Q value for each episode
     
     writer = SummaryWriter('logs_train')
     
@@ -31,16 +31,19 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
     gym = gym_instance.gym
     sim = gym_instance.sim
     dt  = gym_instance.dt
-    # warmup_stop = 0 
-    # print("dt=", dt)
-    t_warmup = 0
-    R_warmup = 0
-    t        = 0
-    R        = 0
+    gym_instance.step_physics() 
+
+    t_warmup        = 0
+    R_warmup        = 0
+    t               = 0
+    R               = 0
     
-    gym_instance.step_physics()  
-    obs, _, _ = gym_instance.step(None)  #obs is of np.array
+    obs, _, _       = gym_instance.step(None)  #obs is of np.array/ tensor
     previous_action = [0.0] * 6
+    combined_action = [0.0] * 6
+    success = 0
+    fail    = 0
+    action = [0.0] * 6
     t_0 = gym.get_sim_time(sim)
     done = False
     # obs = env.reset() #initial state
@@ -50,12 +53,24 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
         gym_instance.step_physics()
         t_now = gym.get_sim_time(sim)
         if t_now - t_0  >= dt:
+            '''if t_warmup % 100 == 0:
+                # actions = np.array(action) * 0.5
+                gym_instance.update()
+                # diff = [actions[j] - gym_instance.piper_dof_states['vel'][j] for j in range(len(actions))]
+                diff = [combined_action[j]  * 0.02 - gym_instance.piper_dof_states['vel'][j] for j in range(len(combined_action))]
+                # print("combined_action= ", combined_action)
+                print("diff=", diff)
+                print("most diff=", np.array(diff).argmax())
+                print("mean=", np.array(diff).mean())'''
+
+            
             action = GRL_model.choose_action_random()  # agent interacts with the environment, action is of tensor(size=8)
             
             combined_action = np.add(action, previous_action)
             
-            if t_warmup % 200 == 0: print(f"combined_action = {combined_action}")
             
+            if t_warmup % 200 == 0: print(f"combined_action = {combined_action * 0.02}")
+            # if t_warmup % 1 == 0: print(f"combined_action = {action}")
             
             # print("time=",t_warmup, "action=", action)
             # print("combined action", combined_action)
@@ -82,9 +97,11 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
             
             if t_warmup % warmup_step == 0:
                 print("#-----------------FAILURE-----------------#")
+                fail += 1
                 gym_instance.reset() 
-                combined_action = [0.0] * 6
+                # combined_action = [0.0] * 6
                 previous_action = [0.0] * 6
+                print(f"#----STAT: fail= {fail}, success= {success}, total= {fail+success}")
         else:
             gym_instance.render()
         # print(f"t= {t}")
@@ -92,13 +109,16 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
         # print(f"time diff= {t_now - t_0}")
             
         if done: 
+            success += 1
             print("#-----------------SUCCESS-----------------#")
             gym_instance.reset() 
-            combined_action = [0.0] * 6
+            # combined_action = [0.0] * 6
             previous_action = [0.0] * 6
             done = False
+            print(f"#----STAT: fail= {fail}, success= {success}, total= {fail+success}")
+        
             
-    print("-----------------FINISHED WARMING UP, EPISODE 1 STARTS-----------------")
+    print("#-----------------FINISHED WARMING UP, EPISODE 1 STARTS-----------------#")
     gym_instance.reset()   
     
     for i in range(1, n_episodes + 1):
@@ -115,7 +135,8 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
         # print("phys. stepped")
         obs, _, _ = gym_instance.step(None)  #obs is of np.array
         previous_action = [0.0] * 6
-        combined_action = [0.0] * 6
+        # combined_action = [0.0] * 6
+        # action          = [0.0] * 6
         # print(f"obs (t = {t}) = , type={type(obs)}")
         # print("Initial obs" , ',    '.join(f'{q:.2f}' for q in obs))
         # print("None action executed")
@@ -133,10 +154,24 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
             # if t % 10 == 0:
                 # print(f"obs (t = {t}) = , type={type(obs)}")
                 # print(',    '.join(f'{q:.2f}' for q in obs))
+                
+                # actions = np.array(action) * 0.5
+                
+                # diff = [actions[j] - gym_instance.piper_dof_states['vel'][j] for j in range(len(actions))]
+                '''if t % 100 == 0:
+                    gym_instance.update()
+                    diff = [combined_action[j]* 0.02 - gym_instance.piper_dof_states['vel'][j] for j in range(len(combined_action))]
+                    # print("combined_action= ", combined_action)
+                    print("diff=", diff)
+                    print("most diff=", np.array(diff).argmax())
+                    print("mean=", np.array(diff).mean())'''
+                
                 action = GRL_model.choose_action(obs)  # agent interacts with the environment, action is of tensor(size=8)
-                # print("obs", obs[7:], "action" , action)
                 combined_action = np.add(action, previous_action)
-                if t % 100 == 0: print(f"time_step= {t},combined_action = {combined_action}")
+                
+                if t % 200 == 0: 
+                    print(f"time_step= {t}, combined_action = {combined_action * 0.02}")
+                    print(f"action = {action}")
                 # print("action", combined_action)
                 # print(',    '.join(f'{q:.2f}' for q in action))
                 obs_next, reward, done = gym_instance.step(combined_action)   #obs_next, reward, done, info 
@@ -163,7 +198,7 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
             # print(f"t= {t}")
             # print(f"time now= {t_now}")
             # print(f"time diff= {t_now - t_0}")
-               
+            
             if t >= max_episode_len or done:
                 combined_action = [0.0] * 6
                 previous_action = [0.0] * 6
@@ -182,9 +217,11 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
         Loss.append(loss)
         # Average_Q.append(avg_q)
         
-        if done:    
+        if done:
+            success += 1
             print('#-----SUCCESS! EPISODE:', i, 'Finished,  Reward:', R, '  Loss:', loss, '----------#') 
         else:
+            fail    += 1
             print('#-----FAILED! EPISODE:', i,  'Finished,  Reward:', R, '  Loss:', loss, '----------#') 
         writer.add_scalar('Reward/episode', R, i)
         writer.add_scalar('Loss/episode', loss, i)
@@ -194,6 +231,19 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
         gym_instance.reset()
         # print("After reset, obs=", obs)
         # gym_instance.render()
+        
+        print(f"#----STAT: fail= {fail}, success= {success}, total= {fail+success}")
+        
+        if i % 100 == 0:
+            # Save model
+            GRL_model.save_model(save_dir)
+            # Save other data
+            np.save(save_dir + "/Rewards_" + i, Rewards)
+            np.save(save_dir + "/Episode_Steps_", i, Episode_Steps)
+            np.save(save_dir + "/Loss_" + i, Loss)
+            np.save(save_dir + "/Average_Q_" + i, Average_Q)
+            
+    
     print('#-----------------TRAINING FINISHED-----------------#')
 
     # Save model

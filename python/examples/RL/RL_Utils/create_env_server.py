@@ -34,7 +34,7 @@ class Gym_env():
         self.sim_device         = args['sim_device']
         self.pipeline           = args['pipeline']
         self.graphics_device_id = args['graphics_device_id']
-        self.physics            = args['physics_engine']  #flex/ physx
+        self.physics    = args['physics_engine']  #flex/ physx
         self.num_threads        = args['num_threads']
         self.subscenes          = args['subscenes']
         self.slices             = args['slices']
@@ -211,10 +211,10 @@ class Gym_env():
             quit()
 
         # Create viewer
-        self.viewer = self.gym.create_viewer(self.sim, gymapi.CameraProperties())
-        if self.viewer is None:
-            print("*** Failed to create viewer")
-            quit()
+        # self.viewer = self.gym.create_viewer(self.sim, gymapi.CameraProperties())
+        # if self.viewer is None:
+            # print("*** Failed to create viewer")
+            # quit()
 
         # Add ground plane
         plane_params = gymapi.PlaneParams()
@@ -334,7 +334,7 @@ class Gym_env():
             
             body_dict = self.gym.get_actor_rigid_body_dict(env, piper_handle)
             
-            gymutil.draw_lines(self.sphere_geom, self.gym, self.viewer, self.envs[i], goal_pose)
+            # gymutil.draw_lines(self.sphere_geom, self.gym, self.viewer, self.envs[i], goal_pose)
 
             self.piper_handles.append(piper_handle)
             # self.cube_handles.append(cube_handle)
@@ -366,9 +366,9 @@ class Gym_env():
             self.gym.set_actor_dof_states(self.envs[i], self.piper_handles[i], piper_dof_states, gymapi.STATE_POS)
 
         # Point camera at environments
-        cam_pos = gymapi.Vec3(4, 3, 3)
-        cam_target = gymapi.Vec3(-4, -3, 0)
-        self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
+        # cam_pos = gymapi.Vec3(4, 3, 3)
+        # cam_target = gymapi.Vec3(-4, -3, 0)
+        # self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
         
         
         dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
@@ -484,8 +484,8 @@ class Gym_env():
         goal_pose.p = gymapi.Vec3(x, y, z)
         goal_pose.r = gymapi.Quat(rand_quat[0], rand_quat[1], rand_quat[2], rand_quat[3])
         print(f"New goal pose: {self.cube_pose[0]:.2f}, {self.cube_pose[1]:.2f}, {self.cube_pose[2]:.2f}")
-        for i in range(self.num_envs):
-            gymutil.draw_lines(self.sphere_geom, self.gym, self.viewer, self.envs[i], goal_pose)
+        # for i in range(self.num_envs):
+            # gymutil.draw_lines(self.sphere_geom, self.gym, self.viewer, self.envs[i], goal_pose)
         # self.render()
     
     #COMPLETE
@@ -617,8 +617,8 @@ class Gym_env():
 
     def render(self):
         # Step rendering
-        self.gym.step_graphics(self.sim)
-        self.gym.draw_viewer(self.viewer, self.sim, False)
+        # self.gym.step_graphics(self.sim)
+        # self.gym.draw_viewer(self.viewer, self.sim, False)
         self.gym.sync_frame_time(self.sim)
 
 
@@ -642,7 +642,7 @@ class Gym_env():
         self.render()
         self.update()
         # Clear any graphical debug lines and choose a new goal
-        self.gym.clear_lines(self.viewer)
+        # self.gym.clear_lines(self.viewer)
         self.time_ep = 0
         self.random_new_goal(False)
         # Allow physics to settle at zero configuration
@@ -938,7 +938,7 @@ class Gym_env():
     def stop_simulation(self):
         print("Done")
         # client.loop_stop() 
-        self.gym.destroy_viewer(self.viewer)
+        # self.gym.destroy_viewer(self.viewer)
         self.gym.destroy_sim(self.sim)
 
 # def main():
