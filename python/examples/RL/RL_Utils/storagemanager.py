@@ -61,10 +61,16 @@ class StorageManager:
     # def store_model(self, model):
     #     with open(os.path.join(self.session_dir, '_agent.pkl'), 'wb') as f:
     #         pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
-    
+
     def store_model(self, model):
         model_path = os.path.join(self.session_dir, '_agent.pth')
-        torch.save(model.state_dict(), model_path)
+        torch.save({'actor': model.actor_model.state_dict(),
+                    'critic_1': model.critic_model_1.state_dict(),
+                    'critic_2': model.critic_model_2.state_dict(),
+                    'actor_optimizer': model.actor_optimizer.state_dict(),
+                    'critic_1_optimizer': model.critic_optimizer_1.state_dict(),
+                    'critic_2_optimizer': model.critic_optimizer_2.state_dict(),
+                }, os.path.join(self.session_dir, '_agent.pth'))
     # ------------------------------- LOADING -------------------------------
 
     def network_load_weights(self, network, model_dir, episode):
