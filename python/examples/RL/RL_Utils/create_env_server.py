@@ -78,7 +78,7 @@ class Gym_env():
                                     [-0.133,0.2333,0.489],[0.492,0.329,-0.115],[0.140,0.590,0.254],[-0.023,0.271,-0.304],[-0.384,0.462,-0.165],[0.157,0.459,0.032]]
         
         self.sphere_geom        = None
-        self.asset_root         = "/home/ucluser/isaacgym/assets"
+        self.asset_root         = "home/wee_ucl/workspace/Piper_RL/assets/"
         
         self.piper_lower_limits = []
         self.piper_upper_limits = []
