@@ -19,7 +19,8 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
     """
     # The following is the model training process
     Rewards         = []  # Initialize Reward Matrix for data preservation
-    Loss            = []  # Initialize the Loss matrix for data preservation
+    Loss_Actor      = []  # Initialize the Loss matrix for data preservation
+    Loss_Critic     = []  # Initialize the Loss matrix for data preservation
     Episode_Steps   = []  # Initialize the Steps matrix to hold the number of steps taken at task completion for each episode
     Average_Q       = []  # Initialize the Average Q matrix to hold the average Q value for each episode
     
@@ -87,7 +88,8 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
             GRL_model.store_transition(obs, action, reward, obs_next, done)
             
             # ------Policy update------ #
-            # GRL_model.learn()
+            if GRL_model.get_length() >= GRL_model.batch_size:
+                GRL_model.learn()
             # print(f"timestep TD3: {GRL_model.time_counter}")
 
             # ------Observation update------ #
@@ -158,9 +160,10 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
             gym_instance.step_physics()        
             t_now = gym.get_sim_time(sim)
             if t_now - t_0  >= dt:
-            # if t % 10 == 0:
-                # print(f"obs (t = {t}) = , type={type(obs)}")
-                # print(',    '.join(f'{q:.2f}' for q in obs))
+                # print("time per step = ", t_now - t_0)
+                # if t % 10 == 0:
+                    # print(f"obs (t = {t}) = , type={type(obs)}")
+                    # print(',    '.join(f'{q:.2f}' for q in obs))
                 
                 # actions = np.array(action) * 0.5
                 
@@ -218,22 +221,23 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
         print("Total time ep.", i ," = ", time.time() - time_ep)
         # ------ records training data ------ #
         # Get the training data
-        training_data = GRL_model.get_statistics()
-        loss = training_data[0]
+        loss_actor, loss_critic = GRL_model.get_statistics()
         # Record the training data
         Rewards.append(R)
         Episode_Steps.append(t)
-        Loss.append(loss)
+        Loss_Actor.append(loss_actor)
+        Loss_Critic.append(loss_critic)
         # Average_Q.append(avg_q)
         
         if done:
             success += 1
-            print('#-----SUCCESS! EPISODE:', i, 'Finished,  Reward:', R, '  Loss:', loss, '----------#') 
+            print('#-----SUCCESS! EPISODE:', i, 'Finished,  Reward:', R, '  Loss_actor:', loss_actor, '  Loss_critic:', loss_critic, '----------#') 
         else:
             fail    += 1
-            print('#-----FAILED! EPISODE:', i,  'Finished,  Reward:', R, '  Loss:', loss, '----------#') 
+            print('#-----FAILED! EPISODE:', i,  'Finished,  Reward:', R, '  Loss_actor:', loss_actor, '  Loss_critic:', loss_critic, '----------#') 
         writer.add_scalar('Reward/episode', R, i)
-        writer.add_scalar('Loss/episode', loss, i)
+        writer.add_scalar('Loss_Actor/episode', loss_actor, i)
+        writer.add_scalar('Loss_Critic/episode', loss_critic, i)
         # writer.add_scalar('Avg_Q/episode', avg_q, i)
         
         # print("EP finished, obs=", obs)
@@ -249,7 +253,8 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
             # Save other data
             np.save(save_dir + "/Rewards_" + str(i), Rewards)
             np.save(save_dir + "/Episode_Steps_",  str(i), Episode_Steps)
-            np.save(save_dir + "/Loss_" +  str(i), Loss)
+            np.save(save_dir + "/Loss_Actor_" +  str(i), Loss_Actor)
+            np.save(save_dir + "/Loss_Critic_" +  str(i), Loss_Critic)
             np.save(save_dir + "/Average_Q_" +  str(i), Average_Q)
             
     
@@ -260,7 +265,8 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
     # Save other data
     np.save(save_dir + "/Rewards", Rewards)
     np.save(save_dir + "/Episode_Steps", Episode_Steps)
-    np.save(save_dir + "/Loss", Loss)
+    np.save(save_dir + "/Loss_Actor_" +  str(i), Loss_Actor)
+    np.save(save_dir + "/Loss_Critic_" +  str(i), Loss_Critic)
     np.save(save_dir + "/Average_Q", Average_Q)
     
     gym_instance.stop_simulation()

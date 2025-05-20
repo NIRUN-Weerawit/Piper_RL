@@ -28,7 +28,7 @@ from ikpy.link import OriginLink, URDFLink
 # from RL_Utils.torch_jit_utils import to_torch, get_axis_params, tensor_clamp, tf_vector, tf_combine
 
 
-class Gym_env():
+class Gym_env_server():
     def __init__(self, args):
         self.args = args
         self.sim_device         = args['sim_device']

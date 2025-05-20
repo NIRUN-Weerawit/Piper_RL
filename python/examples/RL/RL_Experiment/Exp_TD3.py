@@ -1,6 +1,7 @@
 """Contains an experiment class for running simulations."""
 
-from RL_Utils.create_env_server import Gym_env
+from RL_Utils.create_env import Gym_env
+from RL_Utils.create_env_server import Gym_env_server
 import datetime
 import logging
 import time
@@ -31,6 +32,7 @@ class Experiment:
         self.lr_critic              = args['lr_critic']
         self.lr_actor               = args['lr_actor']
         self.explore_noise          = args['explore_noise']
+        self.noise_clip             = args['noise_clip']
         self.gamma                  = args['gamma']
         self.batch_size             = args['batch_size']
         self.update_interval        = args['update_interval']
@@ -42,14 +44,15 @@ class Experiment:
         self.n_episodes             = args['n_episodes']
         self.max_episode_len        = args['max_episode_len']
         self.warmup_step            = args['warmup_step']
-        
         self.action_min             = [-1] * 6
         self.action_max             = [1] * 6 
         
         self.custom_callables = custom_callables or {}
+        
+      
 
         # Get the env name and a creator for the environment.
-        self.gym_instance = Gym_env(args)
+        self.gym_instance = (Gym_env_server(args) if args['server'] else Gym_env(args))
         self.gym_instance.create_piper_env()
         
         # self.gym_instance.dist_reward_scale = args['dist_reward_scale']
@@ -111,7 +114,8 @@ class Experiment:
             critic_optimizer_1,
             critic_2,
             critic_optimizer_2,
-            self.explore_noise,  # noisy
+            self.explore_noise,
+            self.noise_clip,# noisy
             self.warmup,  # warmup
             replay_buffer,  # replay buffer
             self.batch_size,  # batch_size

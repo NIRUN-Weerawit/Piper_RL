@@ -77,4 +77,7 @@ class ReplayBuffer(object):
                 sample_data.append(data_i)
 
         return samples, sample_data
+    
+    def get_length(self):
+        return len(self.buffer)
 

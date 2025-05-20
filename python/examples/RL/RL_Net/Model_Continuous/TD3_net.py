@@ -280,6 +280,11 @@ class NonGraph_Actor_Model(nn.Module):
         # Pi
         pi = self.pi(X_policy)
         action = torch.tanh(pi)
+        
+        
+        return action       #action.detach().cpu().numpy().astype(np.float32)     #action.squeeze(0)
+    
+    
         # print("action")
         # print(',    '.join(f'{q:.2f}' for q in action))
         # Action limitation
@@ -287,8 +292,7 @@ class NonGraph_Actor_Model(nn.Module):
         # mean        = 0.5 * (self.action_max_tensor + self.action_min_tensor)
         # action      = amplitude * torch.tanh(pi) + mean
         
-        return action       #action.detach().cpu().numpy().astype(np.float32)     #action.squeeze(0)
-    
+        
         #----Declare buffer of limits-----#
         # self.register_buffer('buffer_action_max', self.action_max)
         # self.register_buffer('buffer_action_min', self.action_min)
@@ -351,10 +355,10 @@ class NonGraph_Critic_Model(nn.Module):
             # X_in = X_in.unsqueeze(0)           # → [1, N]
 
         # action may already be [1, A] or [A]
-        if action.dim() == 1:
-            action = action.unsqueeze(0)       # → [1, A]
-        if observation.dim() == 1:
-            observation = observation.unsqueeze(0)
+        # if action.dim() == 1:
+            # action = action.unsqueeze(0)       # → [1, A]
+        # if observation.dim() == 1:
+            # observation = observation.unsqueeze(0)
         # if isinstance(observation, np.ndarray):
         #     # from NumPy to torch Tensor on the correct device
         #     observation = torch.from_numpy(observation).to(self.device)
@@ -369,7 +373,8 @@ class NonGraph_Critic_Model(nn.Module):
         # print(f"obs after squeezing = {observation}")
         # Policy
         X_in = F.relu(self.policy_1(observation))
-        # print(f"X_in = {X_in}")
+        # print(f"X_in = {X_in.shape}")
+
         X = torch.cat((X_in, action), dim=1)
         X_policy = F.relu(self.policy_2(X))
         X_policy = F.relu(self.policy_3(X_policy))

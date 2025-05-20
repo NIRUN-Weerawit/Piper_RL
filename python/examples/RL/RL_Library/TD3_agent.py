@@ -125,14 +125,16 @@ class TD3(object):
         # Call the function that holds the data in the replay_buffer
         self.replay_buffer.add(state, action, reward, next_state, done)
 
+    def get_length(self):
+        return len(self.replay_buffer.buffer)
+    
     def sample_memory(self):
         """
            <Experience sampling function>
            Used to sample empirical data from the agent learning process
         """
         # Call the sampling function in replay_buffer
-        data_sample = self.replay_buffer.sample(self.batch_size, self.n_steps)
-        return data_sample
+        return self.replay_buffer.sample(self.batch_size, self.n_steps)
 
 
     def choose_action(self, observation):
@@ -271,9 +273,51 @@ class TD3(object):
         weight = torch.as_tensor(weight, dtype=torch.float32).to(self.device)
         loss = torch.mean(loss * weight.detach())
 
-        return loss
+        return loss    
+    
+    def learn(self):
+        """
+           <policy update function>
+           Used to implement the agent's learning process
+        """
+        # ------whether to return------ #
+        if (self.time_counter % self.update_interval != 0):
+            self.time_counter += 1  
+            return
 
-    def learn_onestep(self, info_batch, data_batch):
+        # if (self.time_counter <= self.warmup) or (self.time_counter % self.update_interval != 0):
+        #     self.time_counter += 1  
+        #     return
+
+        # ------ calculates the loss ------ #
+        # Experience pool sampling, samples include weights and indexes,
+        # data_sample is the specific sampled data
+        samples, data_sample = self.sample_memory()
+        # print("size of data_sample = ", len(data_sample))
+        states, actions, rewards, next_states, dones = zip(*data_sample)
+        states      = torch.stack(states).to(self.device)      # shape: [128, state_dim]
+        actions     = torch.tensor(np.array(actions), dtype=torch.float32).to(self.device)   # shape: [128, action_dim]
+        rewards     = torch.tensor(rewards, dtype=torch.float32).unsqueeze(1).to(self.device)  # shape: [128, 1] or [128]
+        next_states = torch.stack(next_states).to(self.device)   # shape: [128, state_dim]
+        dones       = torch.stack(dones).float().unsqueeze(1).to(self.device) 
+       
+        # loss matrix
+        if self.n_steps == 1:  # single-step learning
+            self.learn_onestep(samples, states, actions, rewards, next_states, dones)
+            # print(f"LEARNED")
+        else:  # multi-step learning
+            self.learn_multisteps(samples, states, actions, rewards, next_states, dones)
+
+        # ------target network update------ #
+        if self.time_counter % self.target_update_interval == 0:
+            self.synchronize_target()
+
+        self.time_counter += 1
+        # print(f"time counter TD3: {self.time_counter}")
+
+    
+               
+    def learn_onestep(self, info_batch, state, action, reward, next_state, done):
         """
            <loss calculation function>
            Used to calculate the loss of the predicted and target values,
@@ -281,19 +325,20 @@ class TD3(object):
 
            Parameter description:
            --------
-           info_batch: the index and weight information of the sampled samples
-           data_batch: the data sampled from the experience pool for training
+           info_batch: the index and weight information of the sampled samples Dict:['weights': xx, 'indexes': xx]
+           data_batch: the data sampled from the experience pool for training [list]
         """
         # Initialize the loss matrix
-        actor_loss = []
-        critic_loss_1 = []
-        critic_loss_2 = []
+        actor_loss      = []
+        critic_loss_1   = []
+        critic_loss_2   = []
 
         # Extract data from each sample in the order in which it is stored
         # ------loss of critic network------ #
-        for elem in data_batch:
-            state, action, reward, next_state, done = elem
-            action = torch.as_tensor(action, dtype=torch.float32).to(self.device)
+            
+        # action = torch.as_tensor(action, dtype=torch.float32).to(self.device)
+
+        
             # state  = torch.as_tensor(state, dtype=torch.float32).to(self.device)
             # next_state = torch.tensor(next_state, dtype=torch.float32).to(self.device)
             # target value
@@ -307,34 +352,34 @@ class TD3(object):
             #                             self.actor_model.action_max_tensor)
  
             #New version of noise for action_target
-            noise = (torch.randn_like(action) * self.explore_noise).clamp(-self.noise_clip, self.noise_clip)
-            action_target = (self.actor_model_target(next_state) + noise).clamp(-1.0, 1.0)
-
+        # print(f"action   = {action.shape}")
+        noise = (torch.randn_like(action) * self.explore_noise).clamp(-self.noise_clip, self.noise_clip)
+        action_target = (self.actor_model_target(next_state) + noise).clamp(-1.0, 1.0).squeeze(0)  #To change from torch.Size([1, 128, 6]) to # torch.Size([128, 6])
+        
+        # print(f"action_target   = {action_target.shape}")
             # target critic_value
-            q1_next = self.critic_model_target_1(next_state, action_target)
-            q2_next = self.critic_model_target_2(next_state, action_target)
-            critic_value_next = torch.min(q1_next, q2_next)
+        q1_next = self.critic_model_target_1(next_state, action_target)
+        q2_next = self.critic_model_target_2(next_state, action_target)
+        critic_value_next = torch.min(q1_next, q2_next)
             
-            doneFlag = True if done else 0
-            critic_target = reward + self.gamma * critic_value_next * (1 - doneFlag)
+        # doneFlag = True if done else 0
+        critic_target = reward + self.gamma * critic_value_next * (1 - done)
             
-            q1 = self.critic_model_1(state, action)
-            q1 = q1.detach()
-            q2 = self.critic_model_2(state, action)
-            q2 = q2.detach()
+        q1 = self.critic_model_1(state, action)
+        q1 = q1.detach()
+        q2 = self.critic_model_2(state, action)
+        q2 = q2.detach()
 
 
-            # loss calculation
-            q1_loss = F.smooth_l1_loss(critic_target, q1)
-            q2_loss = F.smooth_l1_loss(critic_target, q2)
-            critic_loss_1.append(q1_loss)
-            critic_loss_2.append(q2_loss)
+        # loss calculation
+        critic_loss_1 = F.smooth_l1_loss(critic_target, q1)
+        critic_loss_2 = F.smooth_l1_loss(critic_target, q2)
 
         # critic network update
-        critic_loss_e_1 = torch.stack(critic_loss_1)
-        critic_loss_e_2 = torch.stack(critic_loss_2)
-        critic_loss_total_1 = self.loss_process(critic_loss_e_1, info_batch['weights'])
-        critic_loss_total_2 = self.loss_process(critic_loss_e_2, info_batch['weights'])
+        # critic_loss_e_1 = torch.stack(critic_loss_1)
+        # critic_loss_e_2 = torch.stack(critic_loss_2)
+        critic_loss_total_1 = self.loss_process(critic_loss_1, info_batch['weights'])
+        critic_loss_total_2 = self.loss_process(critic_loss_2, info_batch['weights'])
 
         self.critic_optimizer_1.zero_grad()
         self.critic_optimizer_2.zero_grad()
@@ -348,17 +393,15 @@ class TD3(object):
         if self.time_counter % self.update_interval_actor != 0:
             return
         # ------loss of actor network------ #
-        for elem in data_batch:
-            state, action, reward, next_state, done = elem
 
-            mu = self.actor_model(state)
-            actor_loss_sample = -1 * self.critic_model_1(state, mu)
-            actor_loss_s = actor_loss_sample.mean()
-            actor_loss.append(actor_loss_s)
+
+        mu = self.actor_model(state).squeeze(0)
+        actor_loss_sample = -1 * self.critic_model_1(state, mu)
+        actor_loss = actor_loss_sample.mean()
 
         # actor network update
-        actor_loss_e = torch.stack(actor_loss)
-        actor_loss_total = self.loss_process(actor_loss_e, info_batch['weights'])
+        # actor_loss_e = torch.stack(actor_loss)
+        actor_loss_total = self.loss_process(actor_loss, info_batch['weights'])
         self.actor_optimizer.zero_grad()
         actor_loss_total.backward(retain_graph=True)
         nn.utils.clip_grad_norm_(self.actor_model.parameters(), max_norm=2.0, norm_type=2)
@@ -515,38 +558,7 @@ class TD3(object):
             target_param.data.copy_((1 - self.soft_update_tau) *
                                     target_param.data + self.soft_update_tau * source_param.data)
 
-    def learn(self):
-        """
-           <policy update function>
-           Used to implement the agent's learning process
-        """
-        # ------whether to return------ #
-        if (self.time_counter % self.update_interval != 0):
-            self.time_counter += 1  
-            return
 
-        # if (self.time_counter <= self.warmup) or (self.time_counter % self.update_interval != 0):
-        #     self.time_counter += 1  
-        #     return
-
-        # ------ calculates the loss ------ #
-        # Experience pool sampling, samples include weights and indexes,
-        # data_sample is the specific sampled data
-        samples, data_sample = self.sample_memory()
-
-        # loss matrix
-        if self.n_steps == 1:  # single-step learning
-            self.learn_onestep(samples, data_sample)
-            # print(f"LEARNED")
-        else:  # multi-step learning
-            self.learn_multisteps(samples, data_sample)
-
-        # ------target network update------ #
-        if self.time_counter % self.target_update_interval == 0:
-            self.synchronize_target()
-
-        self.time_counter += 1
-        # print(f"time counter TD3: {self.time_counter}")
 
     def get_statistics(self):
         """
