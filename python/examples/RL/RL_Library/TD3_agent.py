@@ -6,6 +6,7 @@ import torch
 import numpy as np
 import torch.autograd as autograd
 import torch.nn.functional as F
+import torch.nn as nn
 import collections
 import copy
 from GRL_Library.common.prioritized_replay_buffer   import PrioritizedReplayBuffer
@@ -52,6 +53,7 @@ class TD3(object):
                  critic_model_2,
                  critic_optimizer_2,
                  explore_noise,
+                 noise_clip,
                  warmup,
                  replay_buffer,
                  batch_size,
@@ -72,6 +74,7 @@ class TD3(object):
         self.critic_optimizer_2         = critic_optimizer_2
 
         self.explore_noise              = explore_noise
+        self.noise_clip                 = noise_clip
         self.warmup                     = warmup
         self.replay_buffer              = replay_buffer
         self.batch_size                 = batch_size
@@ -102,8 +105,8 @@ class TD3(object):
         self.time_counter = 0
         self.n            = 0
 
-        self.loss_record = collections.deque(maxlen=100)
-        
+        self.loss_record_critic = collections.deque(maxlen=100)
+        self.loss_record_actor  = collections.deque(maxlen=100)
         # self.writer = SummaryWriter('logs_loss')
 
     def store_transition(self, state, action, reward, next_state, done):
@@ -294,26 +297,32 @@ class TD3(object):
             # state  = torch.as_tensor(state, dtype=torch.float32).to(self.device)
             # next_state = torch.tensor(next_state, dtype=torch.float32).to(self.device)
             # target value
-            action_target = self.actor_model_target(next_state)
-            action_target = action_target + \
-                            torch.clamp(torch.as_tensor(np.random.normal(scale=0.2)), -0.5, 0.5)
+            
+            #Old version of noise for action_target
+            # action_target = action_target + \
+                            # torch.clamp(torch.as_tensor(np.random.normal(scale=0.2)), -0.5, 0.5)
+                                        
             # action_target = torch.clamp(action_target,
             #                             self.actor_model.action_min_tensor,
             #                             self.actor_model.action_max_tensor)
+ 
+            #New version of noise for action_target
+            noise = (torch.randn_like(action) * self.explore_noise).clamp(-self.noise_clip, self.noise_clip)
+            action_target = (self.actor_model_target(next_state) + noise).clamp(-1.0, 1.0)
 
             # target critic_value
             q1_next = self.critic_model_target_1(next_state, action_target)
             q2_next = self.critic_model_target_2(next_state, action_target)
+            critic_value_next = torch.min(q1_next, q2_next)
+            
+            doneFlag = True if done else 0
+            critic_target = reward + self.gamma * critic_value_next * (1 - doneFlag)
+            
             q1 = self.critic_model_1(state, action)
             q1 = q1.detach()
             q2 = self.critic_model_2(state, action)
             q2 = q2.detach()
-            critic_value_next = torch.min(q1_next, q2_next)
-            if done:
-                doneFlag = 1
-            else:
-                doneFlag = 0
-            critic_target = reward + self.gamma * critic_value_next * (1 - doneFlag)
+
 
             # loss calculation
             q1_loss = F.smooth_l1_loss(critic_target, q1)
@@ -330,6 +339,8 @@ class TD3(object):
         self.critic_optimizer_1.zero_grad()
         self.critic_optimizer_2.zero_grad()
         (critic_loss_total_1 + critic_loss_total_2).backward(retain_graph=True)
+        nn.utils.clip_grad_norm_(self.critic_model_1.parameters(), max_norm=2.0, norm_type=2)
+        nn.utils.clip_grad_norm_(self.critic_model_2.parameters(), max_norm=2.0, norm_type=2)
         self.critic_optimizer_1.step()
         self.critic_optimizer_2.step()
 
@@ -350,6 +361,7 @@ class TD3(object):
         actor_loss_total = self.loss_process(actor_loss_e, info_batch['weights'])
         self.actor_optimizer.zero_grad()
         actor_loss_total.backward(retain_graph=True)
+        nn.utils.clip_grad_norm_(self.actor_model.parameters(), max_norm=2.0, norm_type=2)
         self.actor_optimizer.step()
 
         # ------Updating PRE weights------ #
@@ -359,9 +371,8 @@ class TD3(object):
                                                                        + actor_loss_e))
 
         # ------Record loss------ #
-        self.loss_record.append(float((critic_loss_total_1 +
-                                       critic_loss_total_2 +
-                                       actor_loss_total).detach().cpu().numpy()))
+        self.loss_record_critic.append(float((critic_loss_total_1 + critic_loss_total_2).detach().cpu().numpy()))
+        self.loss_record_actor.append(float((actor_loss_total).detach().cpu().numpy()))
         
         # self.writer.add_scalar('Critic Loss 1/train', critic_loss_total_1.item(), self.time_counter)
         # self.writer.add_scalar('Critic Loss 2/train', critic_loss_total_2.item(), self.time_counter)
@@ -510,9 +521,13 @@ class TD3(object):
            Used to implement the agent's learning process
         """
         # ------whether to return------ #
-        if (self.time_counter <= self.warmup) or (self.time_counter % self.update_interval != 0):
-            self.time_counter += 1
+        if (self.time_counter % self.update_interval != 0):
+            self.time_counter += 1  
             return
+
+        # if (self.time_counter <= self.warmup) or (self.time_counter % self.update_interval != 0):
+        #     self.time_counter += 1  
+        #     return
 
         # ------ calculates the loss ------ #
         # Experience pool sampling, samples include weights and indexes,
@@ -538,8 +553,9 @@ class TD3(object):
            <training data fetch function>
            Used to fetch relevant data from the training process
         """
-        loss_statistics = np.mean(self.loss_record) if self.loss_record else np.nan
-        return [loss_statistics]
+        loss_critic = np.mean(self.loss_record_critic) if self.loss_record_critic else np.nan
+        loss_actor = np.mean(self.loss_record_actor) if self.loss_record_actor else np.nan
+        return [loss_actor, loss_critic]
 
     def save_model(self, save_path):
         """
