@@ -933,7 +933,7 @@ class Gym_env():
         #                                       current_EE_rot['z'],
         #                                       current_EE_rot['w']])
         
-        sum_velocity_targets   =  np.array(self.piper_velocity_target).abs().sum()
+        sum_velocity_targets   =  np.abs(np.array(self.piper_velocity_target)).sum()
         
         if sum_velocity_targets > 5.0:
             print("sum_velocity_targets", sum_velocity_targets)
