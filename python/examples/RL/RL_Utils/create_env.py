@@ -468,8 +468,8 @@ class Gym_env():
     def random_new_goal(self, randomness=True):
         
         if randomness:
-            max_radius = 0.3
-            min_radius = 0.2
+            max_radius = 0.4
+            min_radius = 0.25
             # Random point in spherical coordinates
             r = np.random.uniform(min_radius, max_radius)  # Random radius [0, 0.8]
             theta = np.random.uniform(- np.pi, np.pi )  # Random azimuthal angle [0, 2pi]
@@ -974,7 +974,7 @@ class Gym_env():
             success  = False
             rewards -= 1
             # print("NOT DONE DIST = ", dist.item())            
-        if self.debug and self.time_counter % self.debug_interval == 0:
+        if self.debug and self.time_counter % self.debug_interval == 0 or success:
             print(f"step: {self.time_counter}       dist= {dist:.3f}")
             print(f"rewards: {rewards:3f}   dist_reward: {dist_reward:.3f}  height_reward: {height_reward:.3f}") #rot_reward: {rot_reward:.3f}")
         
