@@ -108,7 +108,7 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
                     # print("fail!!")
                 
                 R  += reward
-                writer.add_scalar('Reward per time step', R, t)
+                writer.add_scalar('Reward per time step', reward, t)
                 # ------Storage of interaction results in the experience replay pool------ #
                 GRL_model.store_transition(obs, action, reward, obs_next, done)
                 
