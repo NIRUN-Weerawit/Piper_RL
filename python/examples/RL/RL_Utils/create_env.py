@@ -472,8 +472,8 @@ class Gym_env():
             min_radius = 0.25
             # Random point in spherical coordinates
             r = np.random.uniform(min_radius, max_radius)  # Random radius [0, 0.8]
-            theta = np.random.uniform(- np.pi, np.pi )  # Random azimuthal angle [0, 2pi]
-            phi = np.random.uniform(0, np.pi )  # Random polar angle [0, pi/2] (upper hemisphere)
+            theta = np.random.uniform(0, 2 * np.pi )  # Random azimuthal angle [0, 2pi]
+            phi = np.random.uniform(0, 2 * np.pi )  # Random polar angle [0, pi/2] (upper hemisphere)
             end_effector_position  = self.piper_body_states['pose']['p'][-3] 
             print("end_effector_position", end_effector_position)
 
@@ -646,8 +646,9 @@ class Gym_env():
         self.render()
         self.update()
         
-        states, states_tensor = self.get_states()
-        current_EE_pose     = states[3:6]
+        _, states_tensor = self.get_states()
+        current_EE_pose     = self.piper_body_states['pose']['p'][-3] 
+        current_EE_pose     = [current_EE_pose['x'],current_EE_pose['y'],current_EE_pose['z']]
         self.goal_dist_initial = np.linalg.norm(np.array(current_EE_pose) - np.array(self.cube_pose))
         
         return states_tensor
@@ -935,8 +936,7 @@ class Gym_env():
         
         sum_velocity_targets   =  np.abs(np.array(self.piper_velocity_target)).sum()
         
-        if sum_velocity_targets > 5.0:
-            print("sum_velocity_targets", sum_velocity_targets)
+        
             
 
         '''# Normalize the quaternions 
@@ -961,24 +961,29 @@ class Gym_env():
         
         
         rewards = self.dist_reward_scale * dist_reward + height_reward * 0.5   #- math.sqrt(self.time_counter)
-        
-        self.writer.add_scalar('Reward per step', rewards, self.time_ep)
+        if sum_velocity_targets > 5.5:
+            # print("sum_velocity_targets", sum_velocity_targets)
+            rewards -= 4 * (sum_velocity_targets - 5.5)
+            # done = True
         
         
         
         if (dist <= 0.15):
-            success  = True
+            success     = True
+            # done        = True
             # print("DONE DIST = ", dist.item())
-            rewards += 1500
+            rewards     += 1000
         else:
-            success  = False
-            rewards -= 1
+            success     = False
+            # done        = False
+            rewards     -= 0.5
             # print("NOT DONE DIST = ", dist.item())            
         if self.debug and self.time_counter % self.debug_interval == 0 or success:
             print(f"step: {self.time_counter}       dist= {dist:.3f}")
             print(f"rewards: {rewards:3f}   dist_reward: {dist_reward:.3f}  height_reward: {height_reward:.3f}") #rot_reward: {rot_reward:.3f}")
         
-
+        # self.writer.add_scalar('Reward per step', rewards, self.time_ep)
+        
         return rewards, success
     
     

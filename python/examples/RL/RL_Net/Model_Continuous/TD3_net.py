@@ -245,9 +245,16 @@ class NonGraph_Actor_Model(nn.Module):
         self.action_max_tensor  = torch.tensor(action_max, dtype=torch.float32)
         self.action_min_tensor  = torch.tensor(action_min, dtype=torch.float32)
         # Encoder
-        self.policy_1 = nn.Linear(N,                hidden_size)
-        self.policy_2 = nn.Linear(hidden_size,      hidden_size)
-        self.policy_3 = nn.Linear(hidden_size,      hidden_size)
+        self.encoder_1 = nn.Linear(N, 32)
+        self.encoder_2 = nn.Linear(32, 32)
+        
+        self.policy_1 = nn.Linear(32,   800)
+        self.policy_2 = nn.Linear(800,  1200)
+        self.policy_3 = nn.Linear(1200, 600)
+        
+        '''self.policy_1 = nn.Linear(32,                    hidden_size)
+        self.policy_2 = nn.Linear(hidden_size,          hidden_size * 2)
+        self.policy_3 = nn.Linear(hidden_size * 2,      hidden_size)'''
         
         # self.policy_3 = nn.Linear(hidden_size * 2,  hidden_size * 2)
         # self.policy_4 = nn.Linear(hidden_size * 2,  hidden_size)
@@ -255,22 +262,26 @@ class NonGraph_Actor_Model(nn.Module):
         # self.policy_6 = nn.Linear(int(hidden_size / 2),  int(hidden_size / 4))
         
         # Actor network
-        self.pi = nn.Linear(hidden_size, A)
+        self.pi = nn.Linear(600, A)
         # self.pi = nn.Linear(int(hidden_size / 4), A)
         self.to(self.device)
 
     def forward(self, observation):
         # observation = observation.unsqueeze(0)
+        
         # Policy
-        X_policy = F.relu(self.policy_1(observation))
-        X_policy = F.relu(self.policy_2(X_policy))
-        X_policy = F.relu(self.policy_3(X_policy))
+        X_in = F.relu(self.encoder_1(observation))
+        X_in = F.relu(self.encoder_2(X_in))        
+        
+        X_policy_1 = F.relu(self.policy_1(X_in))
+        X_policy_2 = F.relu(self.policy_2(X_policy_1))
+        X_policy_3 = F.relu(self.policy_3(X_policy_2))
         # X_policy = F.relu(self.policy_4(X_policy))
         # X_policy = F.relu(self.policy_5(X_policy))
         # X_policy = F.relu(self.policy_6(X_policy))
         
         # Pi
-        pi = self.pi(X_policy)
+        pi = self.pi(X_policy_3)
         action = torch.tanh(pi)
         # print(f"action: {action}")
         
@@ -311,10 +322,23 @@ class NonGraph_Critic_Model(nn.Module):
         super(NonGraph_Critic_Model, self).__init__() 
         self.len_states     = N
         self.num_outputs    = A
+        # State Encoder
+        self.encoder_1 = nn.Linear(N, 32)
+        self.encoder_2 = nn.Linear(32, 32)
         # Policy network
-        self.policy_1 = nn.Linear(N,                hidden_size)
+        self.TFC_A = nn.Linear(A,                   600)
+        self.FC_N  = nn.Linear(32,                  800)
+        self.TFC_N = nn.Linear(800,     600)
+        self.CFC   = nn.Linear(1200,     600)
+        
+        '''self.TFC_A = nn.Linear(A,                   hidden_size)
+        self.FC_N  = nn.Linear(32,                  hidden_size * 2)
+        self.TFC_N = nn.Linear(hidden_size * 2,     hidden_size)
+        self.CFC   = nn.Linear(hidden_size * 2,     hidden_size)'''
+        
+        '''self.policy_1 = nn.Linear(N,                hidden_size)
         self.policy_2 = nn.Linear(hidden_size + A,  hidden_size)
-        self.policy_3 = nn.Linear(hidden_size,      hidden_size)
+        self.policy_3 = nn.Linear(hidden_size,      hidden_size)'''
 
         # Critic network
         self.value = nn.Linear(hidden_size, 1)
@@ -325,12 +349,22 @@ class NonGraph_Critic_Model(nn.Module):
         
     def forward(self, observation, action):
         # Policy
-        X_in = F.relu(self.policy_1(observation))
+        '''X_in = F.relu(self.policy_1(observation))
         # print(f"X_in = {X_in.shape}")
 
         X = torch.cat((X_in, action), dim=1)
         X_policy = F.relu(self.policy_2(X))
-        X_policy = F.relu(self.policy_3(X_policy))
+        X_policy = F.relu(self.policy_3(X_policy))'''
+
+        A_in = self.TFC_A(action)
+        N_encoded = F.relu(self.encoder_1(observation))
+        N_encoded = F.relu(self.encoder_2(N_encoded))
+        
+        N_in = F.relu(self.FC_N(N_encoded))
+        N_in = self.TFC_N(N_in)
+        
+        X = torch.cat((A_in, N_in), dim=1)
+        X_policy = F.relu(self.CFC(X))
 
         # Value
         V = self.value(X_policy)
