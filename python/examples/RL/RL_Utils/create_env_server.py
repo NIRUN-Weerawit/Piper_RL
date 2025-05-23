@@ -6,6 +6,7 @@ Create an isaacgym environment to train piper models for performing tasks
 
 import math
 import random
+import time
 import numpy as np
 import ast
 import sys
@@ -34,7 +35,7 @@ class Gym_env_server():
         self.sim_device         = args['sim_device']
         self.pipeline           = args['pipeline']
         self.graphics_device_id = args['graphics_device_id']
-        self.physics    = args['physics_engine']  #flex/ physx
+        self.physics            = args['physics_engine']  #flex/ physx
         self.num_threads        = args['num_threads']
         self.subscenes          = args['subscenes']
         self.slices             = args['slices']
@@ -47,6 +48,7 @@ class Gym_env_server():
         self.dt                 = args['dt']
         self.debug_interval     = args['debug_interval']
         self.warmup             = args['warmup']
+        self.action_scale       = args['action_scale']
         
         self.env                = None
         self.gym                = None     #self.gym = gymapi.acquire_gym()
@@ -58,6 +60,7 @@ class Gym_env_server():
         self.piper_dof_states   = []
         self.piper_body_states  = []
         self.piper_handles      = []
+        self.piper_velocity_target = []
         self.piper_hand         = "link6"
         self.saved_dof_states   = None
         
@@ -78,7 +81,7 @@ class Gym_env_server():
                                     [-0.133,0.2333,0.489],[0.492,0.329,-0.115],[0.140,0.590,0.254],[-0.023,0.271,-0.304],[-0.384,0.462,-0.165],[0.157,0.459,0.032]]
         
         self.sphere_geom        = None
-        self.asset_root         = "/home/wee_ucl/workspace/Piper_RL/assets/"
+        self.asset_root         = "/home/ucluser/isaacgym/assets"
         
         self.piper_lower_limits = []
         self.piper_upper_limits = []
@@ -89,6 +92,7 @@ class Gym_env_server():
         
         self.time_counter       = 0
         self.time_ep            = 0
+        self.goal_dist_initial  = 0
         
         # self.sims_per_step = 100\
     
@@ -211,10 +215,10 @@ class Gym_env_server():
             quit()
 
         # Create viewer
-        # self.viewer = self.gym.create_viewer(self.sim, gymapi.CameraProperties())
-        # if self.viewer is None:
-            # print("*** Failed to create viewer")
-            # quit()
+        self.viewer = self.gym.create_viewer(self.sim, gymapi.CameraProperties())
+        if self.viewer is None:
+            print("*** Failed to create viewer")
+            quit()
 
         # Add ground plane
         plane_params = gymapi.PlaneParams()
@@ -334,7 +338,7 @@ class Gym_env_server():
             
             body_dict = self.gym.get_actor_rigid_body_dict(env, piper_handle)
             
-            # gymutil.draw_lines(self.sphere_geom, self.gym, self.viewer, self.envs[i], goal_pose)
+            gymutil.draw_lines(self.sphere_geom, self.gym, self.viewer, self.envs[i], goal_pose)
 
             self.piper_handles.append(piper_handle)
             # self.cube_handles.append(cube_handle)
@@ -366,17 +370,28 @@ class Gym_env_server():
             self.gym.set_actor_dof_states(self.envs[i], self.piper_handles[i], piper_dof_states, gymapi.STATE_POS)
 
         # Point camera at environments
-        # cam_pos = gymapi.Vec3(4, 3, 3)
-        # cam_target = gymapi.Vec3(-4, -3, 0)
-        # self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
-        
+        cam_pos = gymapi.Vec3(4, 3, 3)
+        cam_target = gymapi.Vec3(-4, -3, 0)
+        self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
         
         dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
-        
         dof_states = gymtorch.wrap_tensor(dof_state_tensor)
-        dof_states[:, 0][:] = 0.0  # positions
-        dof_states[:, 1][:] = 0.0  # velocities
+        # print("dof_states shape", dof_states.shape)
+        # Set all positions to mid-range for each DOF (first 6 joints)
+        dof_states[:self.piper_num_dofs, 0] = torch.tensor(self.piper_mids[:self.piper_num_dofs], device=dof_states.device)
+        # print("dof_states shape1", dof_states[:self.piper_num_dofs, 0].shape)
+        # Set all velocities to zero for each DOF (first 6 joints)
+        dof_states[:self.piper_num_dofs, 1] = 0.0
         self.saved_dof_states = dof_states.clone()
+        
+        # dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
+
+        # dof_states = gymtorch.wrap_tensor(dof_state_tensor)
+        # print("dof_states shape", dof_states.shape)
+        # dof_states[:, 0][:] = self.piper_mids[:] # positions
+        # print("dof_states shape1", dof_states[:, 0].shape)
+        # dof_states[:, 1][:] = 0.0  # velocities
+        # self.saved_dof_states = dof_states.clone()
         
         print("Issacgym piper simulation is completed")
         
@@ -388,6 +403,8 @@ class Gym_env_server():
         self.time_ep += 1
 
         # advance the simulation in the simulator by one step
+        self.step_physics()
+        
         self.refresh()
         
         #take actions given by RL agent
@@ -441,9 +458,9 @@ class Gym_env_server():
 
         # compute the reward
         # rl_clipped = clip_actions(rl_actions)   #TODO: Make sure whether clip_actions() function is necessary
-        reward, done = self.compute_reward(states_np, rl_actions)  #TODO: fix this when crash is availalbe fail=crash 
+        reward, result = self.compute_reward(states_np, rl_actions)  #TODO: fix this when crash is availalbe fail=crash 
 
-        return states_tensor, reward, done # infos
+        return states_tensor, reward, result  # infos
     
     def wait(self):
             # self.time_counter += 1
@@ -484,8 +501,8 @@ class Gym_env_server():
         goal_pose.p = gymapi.Vec3(x, y, z)
         goal_pose.r = gymapi.Quat(rand_quat[0], rand_quat[1], rand_quat[2], rand_quat[3])
         print(f"New goal pose: {self.cube_pose[0]:.2f}, {self.cube_pose[1]:.2f}, {self.cube_pose[2]:.2f}")
-        # for i in range(self.num_envs):
-            # gymutil.draw_lines(self.sphere_geom, self.gym, self.viewer, self.envs[i], goal_pose)
+        for i in range(self.num_envs):
+            gymutil.draw_lines(self.sphere_geom, self.gym, self.viewer, self.envs[i], goal_pose)
         # self.render()
     
     #COMPLETE
@@ -514,7 +531,7 @@ class Gym_env_server():
         #     if joint_angles_normalized[j] >1.0:
         #         print("joint ", j, "exceeds limit= ", joint_angles[j])
                 
-                
+        
         joint_velocities_normalized[:]      = (self.piper_dof_states['vel'][:6] + 3.0) / 6.0  #list(6) 
         # print("(joint vel) =", joint_velocities)
         # print(f"joint_angles (len={len(joint_angles)}): {joint_angles[0]}, joint_vel (len={len(joint_velocities)}) : {joint_velocities[0]}")
@@ -532,7 +549,7 @@ class Gym_env_server():
         # ee_position_z = [p['z'] for p in ee_p_dicts]
         # end_effector_position = ee_position_x + ee_position_y + ee_position_z
         
-        # print("EE_position_bf", end_effector_position)
+        # print("EE_position_bf", end_effect
         end_effector_position               = self.piper_body_states['pose']['p'][-3] 
         end_effector_position_normalized    = [(end_effector_position['x']  + 0.65) / 1.3 ,
                                                (end_effector_position['y']  + 0.75) / 1.5 ,
@@ -545,6 +562,9 @@ class Gym_env_server():
         end_effector_velocity_normalized     = [(end_effector_velocity[i] + 3.0) / 6.0 for i in range(3)]
         # print("(ee vel normalizeds  ) =", end_effector_velocity_normalized)
         
+        velocity_target =  [(self.piper_velocity_target[i] + 3.0 )/ 6.0 for i in range(len(self.piper_velocity_target))]
+        # print("velo_target=", velocity_target)
+        # print("len=", len(velocity_target))
         # end_effector_position = [list(pos) for pos in end_effector_position] 
         # print("EE_position_af", end_effector_position)
         # print("EE_vel=", end_effector_velocity)
@@ -568,7 +588,7 @@ class Gym_env_server():
         #--------------------------3----------------------------3-----------------------------3-----------------------------------6----------------------------6----------------#
         
         # print("lens=", len(goal_position_normalized), len(end_effector_position_normalized), len(end_effector_velocity_normalized), len(joint_angles), len(joint_velocities_normalized))
-        obs = np.array(goal_position_normalized + end_effector_position_normalized + end_effector_velocity_normalized + joint_angles + joint_velocities_normalized, dtype=np.float32)
+        obs = np.array(goal_position_normalized + end_effector_position_normalized + end_effector_velocity_normalized + joint_angles + joint_velocities_normalized + velocity_target, dtype=np.float32)
         
         # print("obs = ", obs)
         obs_tensor = torch.from_numpy(obs).to("cuda:0")
@@ -594,11 +614,13 @@ class Gym_env_server():
         '''
         for i in range(self.num_envs):
             # self.cube_states        = self.gym.get_actor_rigid_body_states(self.envs[i],    self.cube_handles[i],   gymapi.STATE_POS) 
-            self.piper_dof_states   = self.gym.get_actor_dof_states(self.envs[i],           self.piper_handles[i],  gymapi.STATE_ALL)  
+            self.piper_dof_states       = self.gym.get_actor_dof_states(self.envs[i],           self.piper_handles[i],  gymapi.STATE_ALL)  
             #gymapi.DofState  ([('pos', '<f4'), ('vel', '<f4')]):   piper_dof_state['pos'][i]
-            self.piper_body_states  = self.gym.get_actor_rigid_body_states( self.envs[i],   self.piper_handles[i],  gymapi.STATE_ALL)  
+            self.piper_body_states      = self.gym.get_actor_rigid_body_states( self.envs[i],   self.piper_handles[i],  gymapi.STATE_ALL)  
             
-            self.piper_forces = self.gym.get_actor_dof_forces(self.envs[i], self.piper_handles[i])
+            self.piper_forces           = self.gym.get_actor_dof_forces(self.envs[i], self.piper_handles[i])
+            
+            self.piper_velocity_target  = self.gym.get_actor_dof_velocity_targets(self.envs[i], self.piper_handles[i])
             
             # print(f"forces: {self.piper_forces}")
             
@@ -617,9 +639,20 @@ class Gym_env_server():
 
     def render(self):
         # Step rendering
-        # self.gym.step_graphics(self.sim)
-        # self.gym.draw_viewer(self.viewer, self.sim, False)
+        self.gym.step_graphics(self.sim)
+        self.gym.draw_viewer(self.viewer, self.sim, False)
         self.gym.sync_frame_time(self.sim)
+
+    def init_episode(self):
+        self.step_physics()
+        self.render()
+        self.update()
+        
+        states, states_tensor = self.get_states()
+        current_EE_pose     = states[3:6]
+        self.goal_dist_initial = np.linalg.norm(np.array(current_EE_pose) - np.array(self.cube_pose))
+        
+        return states_tensor
 
 
     def reset(self):
@@ -640,20 +673,17 @@ class Gym_env_server():
         # self.apply_rl_actions_force(np.zeros(6))
         self.apply_rl_actions_velocity(np.zeros(6))
         self.render()
-        self.update()
-        # Clear any graphical debug lines and choose a new goal
-        # self.gym.clear_lines(self.viewer)
-        self.time_ep = 0
-        self.random_new_goal(False)
-        # Allow physics to settle at zero configuration
-        t_start = self.gym.get_sim_time(self.sim)
-        while self.gym.get_sim_time(self.sim) - t_start < 1:
-            self.step_physics()
-            self.render()
-        self.update()
-            
 
-        
+        # Clear any graphical debug lines and choose a new goal
+        self.gym.clear_lines(self.viewer)
+        self.time_ep = 0
+        self.random_new_goal(True)
+        # Allow physics to settle at zero configuration
+
+        # time.sleep(1)
+        self.update()
+
+            
     #COMPLETE
     def apply_rl_actions(self, rl_actions=None):
         """Specify the actions to be performed by the rl agent(s).
@@ -736,7 +766,7 @@ class Gym_env_server():
             rl_actions      =   np.concatenate((rl_actions, [0.0, 0.0]))
             
             # action_np = rl_actions.astype(np.float32) * 1000.0 / 3 #100.0
-            action_np       =   rl_actions.astype(np.float32) * 0.02
+            action_np       =   rl_actions.astype(np.float32) * self.action_scale
             # print(f"rl_actions {action_np}")
             # action_np[1] =   abs(action_np[1])
             # action_np[1] = action_np[1] * 2.0
@@ -751,7 +781,6 @@ class Gym_env_server():
             # print(f"force tensor = {force_tensor}")
             # self.gym.set_actor_dof_position_targets(self.envs[i], self.piper_handles[i], action_np)
             self.gym.set_dof_velocity_target_tensor(self.sim, gymtorch.unwrap_tensor(velocity_tensor))
-    
     
     def apply_rl_actions_force_warmup(self, rl_actions=None):
 
@@ -873,10 +902,13 @@ class Gym_env_server():
         # distance from EE to the goal
         dist = torch.norm(current_EE_pose_tensor - goal_pose_tensor, p=2, dim=-1)
         
-        dist_reward = 1.0 / (1.0 + (2 * dist) ** 2)
+        # dist_reward = 1.0 / (1.0 + (2 * dist) ** 2)
         
-        if current_EE_pose[1] <= 0.08:
-            dist_reward -= 2
+        dist_reward = (2 * self.goal_dist_initial) / (self.goal_dist_initial + dist) - 1
+        dist_reward = dist_reward.detach().cpu().item() 
+        height_reward = 0
+        if current_EE_pose[1] <= 0.1:
+            height_reward = current_EE_pose[1] - 0.1
         
         
         # dist_reward = - 0.5 * (dist ** 2)
@@ -896,368 +928,40 @@ class Gym_env_server():
         #                                       current_EE_rot['z'],
         #                                       current_EE_rot['w']])
         
-        '''# Normalize the quaternions 
-        current_EE_rot_tensor = F.normalize(current_EE_rot_tensor, dim=0)
-        goal_rot_tensor = F.normalize(goal_rot_tensor, dim=0)
+        joint_velocity_targets   =  state[21:29]
+        mean_value = abs(joint_velocity_targets).mean()
+        # if self.time_counter % self.debug_interval == 0: print("mean_value=", mean_value)
+        if mean_value > 3:
+            velo_reward = - 0.5 * ((mean_value - 3) ** 2)
+        else:
+            velo_reward = 0.0
+
+
         
-        dot_product = torch.sum(current_EE_rot_tensor * goal_rot_tensor)
-        dot_product = torch.abs(dot_product)
         
-        rot_reward = 0.5 * (dot_product ** 2)'''
+        rewards = self.dist_reward_scale * dist_reward + height_reward * 0.5 + velo_reward * 1.0  #- math.sqrt(self.time_counter)
         
-        
-        # rot_reward = torch.where(dot_product > 0.8, rot_reward * 2, rot_reward)
-        
-        # # regularization on the actions (summed for each environment)
-        # action_penalty = torch.sum(actions ** 2, dim=-1)
-        
-        #----Detach from GPU and move to cpu and extract only one value out of the tensors
-        
-        # rot_reward = rot_reward.detach().cpu().item()
-        
-        dist_reward = dist_reward.detach().cpu().item()
-        rewards = self.dist_reward_scale * dist_reward - 1  #- math.sqrt(self.time_counter)
         self.writer.add_scalar('Reward per step', rewards, self.time_ep)
         
-        done = (dist <= 0.10)
         
-        if done:
-            print("DONE DIST = ", dist.item())
-            rewards += 100
-            
-            
+        
+        if (dist <= 0.10):
+            success  = True
+            # print("DONE DIST = ", dist.item())
+            rewards += 1500
+        else:
+            success  = False
+            rewards -= 1
+            # print("NOT DONE DIST = ", dist.item())            
         if self.debug and self.time_counter % self.debug_interval == 0:
-            print(f"step: {self.time_counter},  dist= {dist:.3f}")
-            print(f"rewards: {rewards:3f}  dist_reward: {dist_reward:.3f} ") #rot_reward: {rot_reward:.3f}")
+            print(f"step: {self.time_counter}       dist= {dist:.3f}")
+            print(f"rewards: {rewards:3f}   dist_reward: {dist_reward:.3f}  height_reward: {height_reward:.3f}  velo_reward: {velo_reward:.3f}") #rot_reward: {rot_reward:.3f}")
         
-        
-        return rewards, done
+
+        return rewards, success
     
     
     #COMPLETE
     def stop_simulation(self):
         print("Done")
-        # client.loop_stop() 
-        # self.gym.destroy_viewer(self.viewer)
         self.gym.destroy_sim(self.sim)
-
-# def main():
-    # create_piper_env()
-
-# if __name__ == "__main__":
-    # main()
-    
-# def reset(self):
-#     """Reset the environment.
-
-#     This method is performed in between rollouts. It resets the state of
-#     the environment, and re-initializes the vehicles in their starting
-#     positions.
-
-#     If "shuffle" is set to True in InitialConfig, the initial positions of
-#     vehicles is recalculated and the vehicles are shuffled.
-
-#     Returns
-#     -------
-#     observation : array_like
-#         the initial observation of the space. The initial reward is assumed
-#         to be zero.
-#     """
-#     # reset the time counter
-#     time_counter = 0
-
-
-
-
-#     # clear all vehicles from the network and the vehicles class
-#     # FIXME (ev, ak) this is weird and shouldn't be necessary
-#     for veh_id in list(self.k.vehicle.get_ids()):
-#         # do not try to remove the vehicles from the network in the first
-#         # step after initializing the network, as there will be no vehicles
-#         if step_counter == 0:
-#             continue
-#         try:
-#             vehicle.remove(veh_id)
-#         except (FatalTraCIError, TraCIException):
-#             print("Error during start: {}".format(traceback.format_exc()))
-
-#     # do any additional resetting of the vehicle class needed
-#     vehicle.reset()
-
-#     # reintroduce the initial vehicles to the network
-#     for veh_id in initial_ids:
-#         type_id, edge, lane_index, pos, speed = \
-#             initial_state[veh_id]
-
-#         try:
-#             vehicle.add(
-#                 veh_id=veh_id,
-#                 type_id=type_id,
-#                 edge=edge,
-#                 lane=lane_index,
-#                 pos=pos,
-#                 speed=speed)
-#         except (FatalTraCIError, TraCIException):
-#             # if a vehicle was not removed in the first attempt, remove it
-#             # now and then reintroduce it
-#             self.k.vehicle.remove(veh_id)
-#             if self.simulator == 'traci':
-#                 self.k.kernel_api.vehicle.remove(veh_id)  # FIXME: hack
-#             self.k.vehicle.add(
-#                 veh_id=veh_id,
-#                 type_id=type_id,
-#                 edge=edge,
-#                 lane=lane_index,
-#                 pos=pos,
-#                 speed=speed)
-
-#     # advance the simulation in the simulator by one step
-#     simulation.simulation_step()
-
-#     # update the information in each kernel to match the current state
-#     update(reset=True)
-
-#     # update the colors of vehicles
-#     if sim_params.render:
-#         vehicle.update_vehicle_colors()
-
-#     if simulator == 'traci':
-#         initial_ids = kernel_api.vehicle.getIDList()
-#     else:
-#         initial_ids = initial_ids
-
-#     # check to make sure all vehicles have been spawned
-#     if len(self.initial_ids) > len(initial_ids):
-#         missing_vehicles = list(set(self.initial_ids) - set(initial_ids))
-#         msg = '\nNot enough vehicles have spawned! Bad start?\n' \
-#                 'Missing vehicles / initial state:\n'
-#         for veh_id in missing_vehicles:
-#             msg += '- {}: {}\n'.format(veh_id, self.initial_state[veh_id])
-#         raise FatalFlowError(msg=msg)
-
-#     states = get_state()
-
-#     # collect information of the state of the network based on the
-#     # environment class used
-#     state = np.asarray(states).T
-
-#     # observation associated with the reset (no warm-up steps)
-#     observation = np.copy(states)
-
-#     # perform (optional) warm-up steps before training
-#     for _ in range(self.env_params.warmup_steps):
-#         observation, _, _, _ = self.step(rl_actions=None)
-
-#     # render a frame
-#     render(reset=True)
-
-#     return observation
-
-# def clip_actions(self, rl_actions=None):
-#     """Clip the actions passed from the RL agent.
-
-#     Parameters
-#     ----------
-#     rl_actions : array_like
-#         list of actions provided by the RL algorithm
-
-#     Returns
-#     -------
-#     array_like
-#         The rl_actions clipped according to the box or boxes
-#     """
-#     # ignore if no actions are issued
-#     if rl_actions is None:
-#         return
-
-#     # clip according to the action space requirements
-#     if isinstance(self.action_space, Box):
-#         rl_actions = np.clip(
-#             rl_actions,
-#             a_min=self.action_space.low,
-#             a_max=self.action_space.high)
-#     elif isinstance(self.action_space, Tuple):
-#         for idx, action in enumerate(rl_actions):
-#             subspace = self.action_space[idx]
-#             if isinstance(subspace, Box):
-#                 rl_actions[idx] = np.clip(
-#                     action,
-#                     a_min=subspace.low,
-#                     a_max=subspace.high)
-#     return rl_actions
-
-
-
-    # def compute_reward(self, rl_actions, **kwargs):
-    #     """See class definition."""
-    #     # in the warmup steps
-    #     if rl_actions is None:
-    #         return {}
-
-    #     rewards = {}
-    #     for rl_id in self.k.vehicle.get_rl_ids():
-    #         if self.env_params.evaluate:
-    #             # reward is speed of vehicle if we are in evaluation mode
-    #             reward = self.k.vehicle.get_speed(rl_id)
-    #         elif kwargs['fail']:
-    #             # reward is 0 if a collision occurred
-    #             reward = 0
-    #         else:
-    #             # reward high system-level velocities
-    #             cost1 = desired_velocity(self, fail=kwargs['fail'])
-
-    #             # penalize small time headways
-    #             cost2 = 0
-    #             t_min = 1  # smallest acceptable time headway
-
-    #             lead_id = self.k.vehicle.get_leader(rl_id)
-    #             if lead_id not in ["", None] \
-    #                     and self.k.vehicle.get_speed(rl_id) > 0:
-    #                 t_headway = max(
-    #                     self.k.vehicle.get_headway(rl_id) /
-    #                     self.k.vehicle.get_speed(rl_id), 0)
-    #                 cost2 += min((t_headway - t_min) / t_min, 0)
-
-    #             # weights for cost1, cost2, and cost3, respectively
-    #             eta1, eta2 = 1.00, 0.10
-
-    #             reward = max(eta1 * cost1 + eta2 * cost2, 0)
-
-    #         rewards[rl_id] = reward
-    #     return rewards
-
-
-
-
-# piper_dof_states['pos'][0] = 2.618
-# piper_dof_states['pos'][1] = 0.218
-# piper_dof_states['pos'][2] = -2.11
-# piper_dof_states['pos'][3] = 1.014 
-# piper_dof_states['pos'][4] = 1.112 
-# piper_dof_states['pos'][5] = 2.465 
-# piper_dof_states['pos'][6] = 0.04 
-# piper_dof_states['pos'][7] = -0.04
-
-# piper_dof_states['pos'][0] = (2.618 - piper_dof_states['pos'][0]) * 0.01 / total_time + piper_dof_states['pos'][0]
-# piper_dof_states['pos'][1] = (0.281 - piper_dof_states['pos'][1]) * 0.01 / total_time + piper_dof_states['pos'][1]
-# piper_dof_states['pos'][2] = (-2.11 - piper_dof_states['pos'][2]) * 0.01 / total_time + piper_dof_states['pos'][2]
-# piper_dof_states['pos'][3] = (1.014 - piper_dof_states['pos'][3]) * 0.01 / total_time + piper_dof_states['pos'][3]
-# piper_dof_states['pos'][4] = (1.112 - piper_dof_states['pos'][4]) * 0.01 / total_time + piper_dof_states['pos'][4]
-# piper_dof_states['pos'][5] = (2.465 - piper_dof_states['pos'][5]) * 0.01 / total_time + piper_dof_states['pos'][5]
-# piper_dof_states['pos'][6] = (0.04 - piper_dof_states['pos'][6]) * 0.01 / total_time + piper_dof_states['pos'][6]
-# piper_dof_states['pos'][7] = (-0.04 - piper_dof_states['pos'][7]) * 0.01 / total_time + piper_dof_states['pos'][7]
-
-    # def step_warmup(self, rl_actions):
-    #     """Advance the environment by one step.
-
-    #     Assigns actions to autonomous and human-driven agents (i.e. vehicles,
-    #     traffic lights, etc...). Actions that are not assigned are left to the
-    #     control of the simulator. The actions are then used to advance the
-    #     simulator by the number of time steps requested per environment step.
-
-    #     Results from the simulations are processed through various classes,
-    #     such as the Vehicle and TrafficLight kernels, to produce standardized
-    #     methods for identifying specific network state features. Finally,
-    #     results from the simulator are used to generate appropriate
-    #     observations.
-
-    #     Parameters
-    #     ----------
-    #     rl_actions : array_like
-    #         an list of actions provided by the rl algorithm
-
-    #     Returns
-    #     -------
-    #     observation : array_like
-    #         agent's observation of the current environment
-    #     reward : float
-    #         amount of reward associated with the previous state/action pair
-    #     done : bool
-    #         indicates whether the episode has ended
-    #     info : dict
-    #         contains other diagnostic information from the previous action
-    #     """
-    #     # for _ in range(self.num_envs): #TODO recheck this for-loop again
-    #     self.time_counter += 1
-    #     self.time_ep += 1
-        
-    #     # Step the physics
-    #     # self.gym.simulate(self.sim)
-    #     # self.gym.fetch_results(self.sim, True)
-        
-    #     # advance the simulation in the simulator by one step
-    #     self.refresh()
-                
-    #     #take actions given by RL agent
-    #     # self.apply_rl_actions(rl_actions)
-    #     self.apply_rl_actions_force_warmup(rl_actions)
-        
-    #     # store new observations in the vehicles and traffic lights class
-    #     self.update()
-        
-    #     #----TODO: DURING WARMING UP, LET THE AGENT LEARN FROM MOVING ROBOTIC ARM USING POSITION    
-
-    #     # crash encodes whether the simulator experienced a collision
-    #     # crash = self.check_collision()
-
-    #     # stop collecting new simulation steps if there is a collision
-    #     # if crash:
-    #         # break
-
-    #     # render a frame
-    #     self.render()
-
-    #     states = self.get_states()
-    #     #TODO: print out the structure of the states
-        
-    #     # random new goal
-    #     # if self.time_counter % 20 == 0:
-    #         # self.random_new_goal()
-        
-    #     # collect information of the state of the network based on the
-    #     # environment class used
-    #     # self.state = np.asarray(states).flatten
-        
-    #     # if self.debug:
-    #         # print("stored obs:", self.state)
-    #     # collect observation new state associated with action
-    #     next_observation = np.copy(states)
-
-    #     # test if the environment should terminate due to a collision or the
-    #     # time horizon being met
-    #     # done = (time_counter >= self.num_envs * (1_steps + env_params.horizon) ) #or crash)
-    #     # done = (self.time_counter >= horizon )
-    #     #TODO: Need to set the proper done conditions. Like grab it successfully or crash (HOW??)
-        
-    #     # compute the info for each agent
-    #     infos = {}
-
-    #     # compute the reward
-    #     # rl_clipped = clip_actions(rl_actions)   #TODO: Make sure whether clip_actions() function is necessary
-    #     reward, done = self.compute_reward(next_observation, rl_actions)  #TODO: fix this when crash is availalbe fail=crash 
-        
-    #     return next_observation, reward, done # infos
-
-            
-    # def reset(self):
-    #     self.gym.clear_lines(self.viewer)
-    #     for i in range(self.num_envs):
-    #         # Set piper pose so that each joint is in the middle of its actuation range
-    #         piper_dof_states = self.gym.get_actor_dof_states(self.envs[i], self.piper_handles[i], gymapi.STATE_POS)
-        
-    #         # for j in range(self.piper_num_dofs):
-    #         #     # piper_dof_states['pos'][j] = self.piper_mids[j]
-                
-    #         piper_dof_states['pos'][:] = 0.0
-    #         self.gym.set_actor_dof_states(self.envs[i], self.piper_handles[i], piper_dof_states, gymapi.STATE_POS)
-            
-    #         # self.gym.set_actor_dof_position_targets(self.envs[i], self.piper_handles[i], piper_dof_states['pos'])
-    #     self.refresh()
-    #     self.time_ep     = 0   
-    #     self.random_new_goal() 
-    #     # Allow physics to settle
-    #     t_start = self.gym.get_sim_time(self.sim)
-    #     while self.gym.get_sim_time(self.sim) - t_start < 1.5:
-    #         self.render()
-    #     # self.refresh()
-            

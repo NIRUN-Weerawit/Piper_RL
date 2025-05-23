@@ -165,7 +165,7 @@ class TD3(object):
         # noise = torch.randn(1, self.actor_model.num_outputs,
                         # device=self.device) * self.explore_noise  #ChatGPT
         action = action + noise
-
+        # print("action TD3 =", action)
             
         action = np.clip(action, [-1.0] * self.action_size, [1.0] * self.action_size)
             # print(f"RL_ACTION_CLIPPED: {action}")
@@ -181,7 +181,7 @@ class TD3(object):
         
         # print(f"RL_ACTION: {action[0]}")   
         
-        return action[0]   #np.array
+        return action   #np.array
 
     def choose_action_random(self):
         # random_action = [0.0] * self.action_size
@@ -213,7 +213,7 @@ class TD3(object):
         random_action = []
         for i in range(self.action_size):
             # random_action.append(np.clip(np.random.uniform(-1.0, 1.0), -1.0, 1.0)) 
-            random_action.append(np.clip(np.random.normal(scale=1.0), -1.0, 1.0)) 
+            random_action.append(np.clip(np.random.normal(scale=self.explore_noise), -1.0, 1.0)) 
         # random_action[1]   = np.clip(np.random.uniform(-1.0, 1.0) + 0.05, -1.0, 1.0)
         # random_action[2]   = np.clip(np.random.uniform(-1.0, 1.0) - 0.025, -1.0, 1.0)
             
@@ -299,7 +299,9 @@ class TD3(object):
         actions     = torch.tensor(np.array(actions), dtype=torch.float32).to(self.device)   # shape: [128, action_dim]
         rewards     = torch.tensor(rewards, dtype=torch.float32).unsqueeze(1).to(self.device)  # shape: [128, 1] or [128]
         next_states = torch.stack(next_states).to(self.device)   # shape: [128, state_dim]
-        dones       = torch.stack(dones).float().unsqueeze(1).to(self.device) 
+        # print("dones = ", dones)
+        # print("dones = ", type(dones))
+        dones       = torch.tensor(dones, dtype=torch.float32).unsqueeze(1).to(self.device) 
        
         # loss matrix
         if self.n_steps == 1:  # single-step learning
@@ -353,22 +355,32 @@ class TD3(object):
  
             #New version of noise for action_target
         # print(f"action   = {action.shape}")
-        noise = (torch.randn_like(action) * self.explore_noise).clamp(-self.noise_clip, self.noise_clip)
-        action_target = (self.actor_model_target(next_state) + noise).clamp(-1.0, 1.0).squeeze(0)  #To change from torch.Size([1, 128, 6]) to # torch.Size([128, 6])
-        
-        # print(f"action_target   = {action_target.shape}")
-            # target critic_value
-        q1_next = self.critic_model_target_1(next_state, action_target)
-        q2_next = self.critic_model_target_2(next_state, action_target)
-        critic_value_next = torch.min(q1_next, q2_next)
+        with torch.no_grad():
+            noise = (torch.randn_like(action) * self.explore_noise).clamp(-self.noise_clip, self.noise_clip)
+            action_target = (self.actor_model_target(next_state) + noise).clamp(-1.0, 1.0).squeeze(0)  #To change from torch.Size([1, 128, 6]) to # torch.Size([128, 6])
             
-        # doneFlag = True if done else 0
-        critic_target = reward + self.gamma * critic_value_next * (1 - done)
+            # print(f"action_target   = {action_target.shape}")
+                # target critic_value
+            q1_next = self.critic_model_target_1(next_state, action_target)
+            q2_next = self.critic_model_target_2(next_state, action_target)
+            critic_value_next = torch.min(q1_next, q2_next)
+                
+            # Discount factor
+            # scaling_list  = [self.gamma ** i for i in range(self.batch_size)]
+            # scaling_tensor  = torch.tensor(scaling_list, dtype=torch.float32).unsqueeze(1).to(self.device)
+            # Calculate the reward matrix by multiplying the reward value with
+            # the corresponding factor of the discount factor
+            # R = torch.multiply(reward, scaling_tensor)
+            # Sum
+            # R = torch.sum(R)
+        
+            # doneFlag = True if done else 0
+            critic_target = reward + self.gamma * critic_value_next * (1 - done)
             
         q1 = self.critic_model_1(state, action)
-        q1 = q1.detach()
+        # q1 = q1.detach()
         q2 = self.critic_model_2(state, action)
-        q2 = q2.detach()
+        # q2 = q2.detach()
 
 
         # loss calculation
@@ -383,7 +395,7 @@ class TD3(object):
 
         self.critic_optimizer_1.zero_grad()
         self.critic_optimizer_2.zero_grad()
-        (critic_loss_total_1 + critic_loss_total_2).backward(retain_graph=True)
+        (critic_loss_total_1 + critic_loss_total_2).backward()
         nn.utils.clip_grad_norm_(self.critic_model_1.parameters(), max_norm=2.0, norm_type=2)
         nn.utils.clip_grad_norm_(self.critic_model_2.parameters(), max_norm=2.0, norm_type=2)
         self.critic_optimizer_1.step()
@@ -397,21 +409,22 @@ class TD3(object):
 
         mu = self.actor_model(state).squeeze(0)
         actor_loss_sample = -1 * self.critic_model_1(state, mu)
-        actor_loss = actor_loss_sample.mean()
+        actor_loss_total = actor_loss_sample.mean()
 
         # actor network update
         # actor_loss_e = torch.stack(actor_loss)
-        actor_loss_total = self.loss_process(actor_loss, info_batch['weights'])
+        # actor_loss_total = self.loss_process(actor_loss, info_batch['weights'])
         self.actor_optimizer.zero_grad()
-        actor_loss_total.backward(retain_graph=True)
+        # actor_loss_total.backward(retain_graph=True)
+        actor_loss_total.backward()
         nn.utils.clip_grad_norm_(self.actor_model.parameters(), max_norm=2.0, norm_type=2)
         self.actor_optimizer.step()
 
         # ------Updating PRE weights------ #
         if isinstance(self.replay_buffer, PrioritizedReplayBuffer):
-            self.replay_buffer.update_priority(info_batch['indexes'], (critic_loss_e_1
-                                                                       + critic_loss_e_2
-                                                                       + actor_loss_e))
+            self.replay_buffer.update_priority(info_batch['indexes'], (critic_loss_1
+                                                                       + critic_loss_2
+                                                                       + actor_loss))
 
         # ------Record loss------ #
         self.loss_record_critic.append(float((critic_loss_total_1 + critic_loss_total_2).detach().cpu().numpy()))

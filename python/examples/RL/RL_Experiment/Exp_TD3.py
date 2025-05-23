@@ -1,7 +1,6 @@
 """Contains an experiment class for running simulations."""
 
 from RL_Utils.create_env import Gym_env
-from RL_Utils.create_env_server import Gym_env_server
 import datetime
 import logging
 import time
@@ -28,6 +27,7 @@ class Experiment:
         self.hidden_size            = args['hidden_size']
         self.N                      = args['state_size']
         self.A                      = args['action_size']
+        # self.action_scale           = args['action_scale']
         self.warmup                 = args['warmup']
         self.lr_critic              = args['lr_critic']
         self.lr_actor               = args['lr_actor']
@@ -43,7 +43,6 @@ class Experiment:
         self.test_episodes          = args['test_episodes']
         self.n_episodes             = args['n_episodes']
         self.max_episode_len        = args['max_episode_len']
-        self.warmup_step            = args['warmup_step']
         self.action_min             = [-1] * 6
         self.action_max             = [1] * 6 
         
@@ -52,7 +51,7 @@ class Experiment:
       
 
         # Get the env name and a creator for the environment.
-        self.gym_instance = (Gym_env_server(args) if args['server'] else Gym_env(args))
+        self.gym_instance = Gym_env(args)
         self.gym_instance.create_piper_env()
         
         # self.gym_instance.dist_reward_scale = args['dist_reward_scale']
@@ -75,7 +74,7 @@ class Experiment:
         import torch.nn
         from GRL_Library.common             import replay_buffer
         from RL_Library                     import TD3_agent
-        from RL_Utils.Train_and_Test_DDPG   import Training_GRLModels, Testing_GRLModels
+        from RL_Utils.Train_and_Test_TD3   import Training_GRLModels, Testing_GRLModels
 
         # Initialize GRL models
         # num_envs = num_envs
@@ -99,7 +98,7 @@ class Experiment:
             critic_2 = NonGraph_Critic_Model(N, A, self.action_min, self.action_max, self.hidden_size)        #.to(device)
 
 
-        actor_optimizer = torch.optim.Adam(actor.parameters(), lr=self.lr_actor)  # 需要定义学习率
+        actor_optimizer = torch.optim.Adam(actor.parameters(), lr=self.lr_actor)  # 
         critic_optimizer_1 = torch.optim.Adam(critic_1.parameters(), lr=self.lr_critic)  # 需要定义学习率
         critic_optimizer_2 = torch.optim.Adam(critic_2.parameters(), lr=self.lr_critic)  # 需要定义学习率
 
@@ -136,7 +135,7 @@ class Experiment:
         print(f"save_dir= {save_dir}")
         # debug_training = True
         if training:
-            Training_GRLModels(actor, GRL_TD3, self.n_episodes, self.max_episode_len, save_dir, debug_training, self.gym_instance, self.warmup, self.warmup_step)
+            Training_GRLModels(actor, GRL_TD3, self.n_episodes, self.max_episode_len, save_dir, debug_training, self.gym_instance, self.warmup)
         
         # Testing
         

@@ -246,40 +246,33 @@ class NonGraph_Actor_Model(nn.Module):
         self.action_min_tensor  = torch.tensor(action_min, dtype=torch.float32)
         # Encoder
         self.policy_1 = nn.Linear(N,                hidden_size)
-        self.policy_2 = nn.Linear(hidden_size,      hidden_size * 2)
-        self.policy_3 = nn.Linear(hidden_size * 2,  hidden_size * 2)
-        self.policy_4 = nn.Linear(hidden_size * 2,  hidden_size)
-        self.policy_5 = nn.Linear(hidden_size,      int(hidden_size / 2))
-        self.policy_6 = nn.Linear(int(hidden_size / 2),  int(hidden_size / 4))
+        self.policy_2 = nn.Linear(hidden_size,      hidden_size)
+        self.policy_3 = nn.Linear(hidden_size,      hidden_size)
+        
+        # self.policy_3 = nn.Linear(hidden_size * 2,  hidden_size * 2)
+        # self.policy_4 = nn.Linear(hidden_size * 2,  hidden_size)
+        # self.policy_5 = nn.Linear(hidden_size,      int(hidden_size / 2))
+        # self.policy_6 = nn.Linear(int(hidden_size / 2),  int(hidden_size / 4))
         
         # Actor network
-        self.pi = nn.Linear(int(hidden_size / 4), A)
-        
+        self.pi = nn.Linear(hidden_size, A)
+        # self.pi = nn.Linear(int(hidden_size / 4), A)
         self.to(self.device)
 
     def forward(self, observation):
-        """
-            The data type of observation is numpy.ndarray, which needs to be converted to a
-            Tensor data type.
-        """
-        # print(f"type of observation: {type(observation)}")
-        # print(f"device: {observation.get_device()}")
-        # observation = torch.from_numpy(observation).to(self.device)
-        # print("ACTOR device:", self.device)
-        # print(f"before: {observation.get_device()}")
-        observation = observation.unsqueeze(dim=0)
-        # print(f"after: {observation.get_device()}")
+        # observation = observation.unsqueeze(0)
         # Policy
         X_policy = F.relu(self.policy_1(observation))
         X_policy = F.relu(self.policy_2(X_policy))
         X_policy = F.relu(self.policy_3(X_policy))
-        X_policy = F.relu(self.policy_4(X_policy))
-        X_policy = F.relu(self.policy_5(X_policy))
-        X_policy = F.relu(self.policy_6(X_policy))
+        # X_policy = F.relu(self.policy_4(X_policy))
+        # X_policy = F.relu(self.policy_5(X_policy))
+        # X_policy = F.relu(self.policy_6(X_policy))
         
         # Pi
         pi = self.pi(X_policy)
         action = torch.tanh(pi)
+        # print(f"action: {action}")
         
         
         return action       #action.detach().cpu().numpy().astype(np.float32)     #action.squeeze(0)
@@ -313,15 +306,11 @@ class NonGraph_Actor_Model(nn.Module):
         
 # ------NonGraph Critic Model------ #
 class NonGraph_Critic_Model(nn.Module):
-    """
 
-    """
     def __init__(self, N, A, action_min, action_max, hidden_size):
         super(NonGraph_Critic_Model, self).__init__() 
         self.len_states     = N
         self.num_outputs    = A
-        # self.action_max     = action_max
-        # self.action_min     = action_min
         # Policy network
         self.policy_1 = nn.Linear(N,                hidden_size)
         self.policy_2 = nn.Linear(hidden_size + A,  hidden_size)
@@ -330,47 +319,11 @@ class NonGraph_Critic_Model(nn.Module):
         # Critic network
         self.value = nn.Linear(hidden_size, 1)
 
-        # GPU configuration
-        # if torch.cuda.is_available():
-        #     GPU_num = torch.cuda.current_device()
-        #     self.device = torch.device("cuda:{}".format(GPU_num))
-        # else:
-        #     self.device = "cpu"
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # print("device:", self.device)
         self.to(self.device)
         
-        
     def forward(self, observation, action):
-        """
-            1.Observation: The data type here is numpy.ndarray, which needs to be converted to a
-            Tensor data type.
-            2.Action: the actions are already of tensors
-        """
-        # X_in = observation.to(self.device)
-        # print("type of observation: ", type(observation))
-        # print("type of action: ", type(action))
-        # X_in = torch.from_numpy(observation).to(self.device)
-        # if X_in.dim() == 1:
-            # X_in = X_in.unsqueeze(0)           # → [1, N]
-
-        # action may already be [1, A] or [A]
-        # if action.dim() == 1:
-            # action = action.unsqueeze(0)       # → [1, A]
-        # if observation.dim() == 1:
-            # observation = observation.unsqueeze(0)
-        # if isinstance(observation, np.ndarray):
-        #     # from NumPy to torch Tensor on the correct device
-        #     observation = torch.from_numpy(observation).to(self.device)
-        
-        # observation = torch.from_numpy(observation).to(self.device)
-        # print(f"size before squeezing = {len(observation)}")
-        # print(f"obs before squeezing = {observation}")
-        
-        # print(f"next_state      = {observation.shape}")
-        # print(f"action_target   = {action.shape}")
-        # print(f"size after squeezing = {len(observation)}")
-        # print(f"obs after squeezing = {observation}")
         # Policy
         X_in = F.relu(self.policy_1(observation))
         # print(f"X_in = {X_in.shape}")

@@ -6,6 +6,7 @@ Create an isaacgym environment to train piper models for performing tasks
 
 import math
 import random
+import time
 import numpy as np
 import ast
 import sys
@@ -47,6 +48,8 @@ class Gym_env():
         self.dt                 = args['dt']
         self.debug_interval     = args['debug_interval']
         self.warmup             = args['warmup']
+        self.action_scale       = args['action_scale']
+        self.server             = args['server'] 
         
         self.env                = None
         self.gym                = None     #self.gym = gymapi.acquire_gym()
@@ -58,6 +61,7 @@ class Gym_env():
         self.piper_dof_states   = []
         self.piper_body_states  = []
         self.piper_handles      = []
+        self.piper_velocity_target = []
         self.piper_hand         = "link6"
         self.saved_dof_states   = None
         
@@ -89,6 +93,7 @@ class Gym_env():
         
         self.time_counter       = 0
         self.time_ep            = 0
+        self.goal_dist_initial  = 0
         
         # self.sims_per_step = 100\
     
@@ -211,10 +216,11 @@ class Gym_env():
             quit()
 
         # Create viewer
-        self.viewer = self.gym.create_viewer(self.sim, gymapi.CameraProperties())
-        if self.viewer is None:
-            print("*** Failed to create viewer")
-            quit()
+        if not self.server:
+            self.viewer = self.gym.create_viewer(self.sim, gymapi.CameraProperties())
+            if self.viewer is None:
+                print("*** Failed to create viewer")
+                quit()
 
         # Add ground plane
         plane_params = gymapi.PlaneParams()
@@ -276,17 +282,6 @@ class Gym_env():
             viewer of the gym environment
         """
         
-        # params = dict()
-        # params['num_envs'] = args.num_envs
-        # params['graphics_device_id'] = args.graphics_device_id
-        # params['physics_engine'] = args.physics_engine
-        # params['num_threads'] = args.num_threads
-        # params['total_time'] = args.total_time
-        # params['use_gpu'] = args.use_gpu
-        # params['use_gpu_pipeline'] = args.use_gpu_pipeline
-        # params['compute_device_id'] = args.compute_device_id
-        # params['sim_device'] = args.sim_device
-        
         # Time to wait in seconds before moving robot
         next_piper_update_time = 1.0
         # Set up the env grid
@@ -333,8 +328,8 @@ class Gym_env():
             self.gym.enable_actor_dof_force_sensors(env, piper_handle)
             
             body_dict = self.gym.get_actor_rigid_body_dict(env, piper_handle)
-            
-            gymutil.draw_lines(self.sphere_geom, self.gym, self.viewer, self.envs[i], goal_pose)
+            if not self.server:
+                gymutil.draw_lines(self.sphere_geom, self.gym, self.viewer, self.envs[i], goal_pose)
 
             self.piper_handles.append(piper_handle)
             # self.cube_handles.append(cube_handle)
@@ -368,15 +363,27 @@ class Gym_env():
         # Point camera at environments
         cam_pos = gymapi.Vec3(4, 3, 3)
         cam_target = gymapi.Vec3(-4, -3, 0)
-        self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
-        
+        if not self.server:
+            self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
         
         dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
-        
         dof_states = gymtorch.wrap_tensor(dof_state_tensor)
-        dof_states[:, 0][:] = 0.0  # positions
-        dof_states[:, 1][:] = 0.0  # velocities
+        # print("dof_states shape", dof_states.shape)
+        # Set all positions to mid-range for each DOF (first 6 joints)
+        dof_states[:self.piper_num_dofs, 0] = torch.tensor(self.piper_mids[:self.piper_num_dofs], device=dof_states.device)
+        # print("dof_states shape1", dof_states[:self.piper_num_dofs, 0].shape)
+        # Set all velocities to zero for each DOF (first 6 joints)
+        dof_states[:self.piper_num_dofs, 1] = 0.0
         self.saved_dof_states = dof_states.clone()
+        
+        # dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
+
+        # dof_states = gymtorch.wrap_tensor(dof_state_tensor)
+        # print("dof_states shape", dof_states.shape)
+        # dof_states[:, 0][:] = self.piper_mids[:] # positions
+        # print("dof_states shape1", dof_states[:, 0].shape)
+        # dof_states[:, 1][:] = 0.0  # velocities
+        # self.saved_dof_states = dof_states.clone()
         
         print("Issacgym piper simulation is completed")
         
@@ -388,6 +395,8 @@ class Gym_env():
         self.time_ep += 1
 
         # advance the simulation in the simulator by one step
+        self.step_physics()
+        
         self.refresh()
         
         #take actions given by RL agent
@@ -441,9 +450,9 @@ class Gym_env():
 
         # compute the reward
         # rl_clipped = clip_actions(rl_actions)   #TODO: Make sure whether clip_actions() function is necessary
-        reward, done = self.compute_reward(states_np, rl_actions)  #TODO: fix this when crash is availalbe fail=crash 
+        reward, result = self.compute_reward(states_np, rl_actions)  #TODO: fix this when crash is availalbe fail=crash 
 
-        return states_tensor, reward, done # infos
+        return states_tensor, reward, result  # infos
     
     def wait(self):
             # self.time_counter += 1
@@ -485,7 +494,8 @@ class Gym_env():
         goal_pose.r = gymapi.Quat(rand_quat[0], rand_quat[1], rand_quat[2], rand_quat[3])
         print(f"New goal pose: {self.cube_pose[0]:.2f}, {self.cube_pose[1]:.2f}, {self.cube_pose[2]:.2f}")
         for i in range(self.num_envs):
-            gymutil.draw_lines(self.sphere_geom, self.gym, self.viewer, self.envs[i], goal_pose)
+            if not self.server:
+                gymutil.draw_lines(self.sphere_geom, self.gym, self.viewer, self.envs[i], goal_pose)
         # self.render()
     
     #COMPLETE
@@ -514,7 +524,7 @@ class Gym_env():
         #     if joint_angles_normalized[j] >1.0:
         #         print("joint ", j, "exceeds limit= ", joint_angles[j])
                 
-                
+        
         joint_velocities_normalized[:]      = (self.piper_dof_states['vel'][:6] + 3.0) / 6.0  #list(6) 
         # print("(joint vel) =", joint_velocities)
         # print(f"joint_angles (len={len(joint_angles)}): {joint_angles[0]}, joint_vel (len={len(joint_velocities)}) : {joint_velocities[0]}")
@@ -532,7 +542,7 @@ class Gym_env():
         # ee_position_z = [p['z'] for p in ee_p_dicts]
         # end_effector_position = ee_position_x + ee_position_y + ee_position_z
         
-        # print("EE_position_bf", end_effector_position)
+        # print("EE_position_bf", end_effect
         end_effector_position               = self.piper_body_states['pose']['p'][-3] 
         end_effector_position_normalized    = [(end_effector_position['x']  + 0.65) / 1.3 ,
                                                (end_effector_position['y']  + 0.75) / 1.5 ,
@@ -545,6 +555,9 @@ class Gym_env():
         end_effector_velocity_normalized     = [(end_effector_velocity[i] + 3.0) / 6.0 for i in range(3)]
         # print("(ee vel normalizeds  ) =", end_effector_velocity_normalized)
         
+        velocity_target =  [(self.piper_velocity_target[i] + 3.0 )/ 6.0 for i in range(len(self.piper_velocity_target))]
+        # print("velo_target=", velocity_target)
+        # print("len=", len(velocity_target))
         # end_effector_position = [list(pos) for pos in end_effector_position] 
         # print("EE_position_af", end_effector_position)
         # print("EE_vel=", end_effector_velocity)
@@ -568,7 +581,7 @@ class Gym_env():
         #--------------------------3----------------------------3-----------------------------3-----------------------------------6----------------------------6----------------#
         
         # print("lens=", len(goal_position_normalized), len(end_effector_position_normalized), len(end_effector_velocity_normalized), len(joint_angles), len(joint_velocities_normalized))
-        obs = np.array(goal_position_normalized + end_effector_position_normalized + end_effector_velocity_normalized + joint_angles + joint_velocities_normalized, dtype=np.float32)
+        obs = np.array(goal_position_normalized + end_effector_position_normalized + end_effector_velocity_normalized + joint_angles + joint_velocities_normalized + velocity_target, dtype=np.float32)
         
         # print("obs = ", obs)
         obs_tensor = torch.from_numpy(obs).to("cuda:0")
@@ -594,11 +607,13 @@ class Gym_env():
         '''
         for i in range(self.num_envs):
             # self.cube_states        = self.gym.get_actor_rigid_body_states(self.envs[i],    self.cube_handles[i],   gymapi.STATE_POS) 
-            self.piper_dof_states   = self.gym.get_actor_dof_states(self.envs[i],           self.piper_handles[i],  gymapi.STATE_ALL)  
+            self.piper_dof_states       = self.gym.get_actor_dof_states(self.envs[i],           self.piper_handles[i],  gymapi.STATE_ALL)  
             #gymapi.DofState  ([('pos', '<f4'), ('vel', '<f4')]):   piper_dof_state['pos'][i]
-            self.piper_body_states  = self.gym.get_actor_rigid_body_states( self.envs[i],   self.piper_handles[i],  gymapi.STATE_ALL)  
+            self.piper_body_states      = self.gym.get_actor_rigid_body_states( self.envs[i],   self.piper_handles[i],  gymapi.STATE_ALL)  
             
-            self.piper_forces = self.gym.get_actor_dof_forces(self.envs[i], self.piper_handles[i])
+            self.piper_forces           = self.gym.get_actor_dof_forces(self.envs[i], self.piper_handles[i])
+            
+            self.piper_velocity_target  = self.gym.get_actor_dof_velocity_targets(self.envs[i], self.piper_handles[i])
             
             # print(f"forces: {self.piper_forces}")
             
@@ -617,9 +632,21 @@ class Gym_env():
 
     def render(self):
         # Step rendering
-        self.gym.step_graphics(self.sim)
-        self.gym.draw_viewer(self.viewer, self.sim, False)
+        if not self.server:
+            self.gym.step_graphics(self.sim)
+            self.gym.draw_viewer(self.viewer, self.sim, False)
         self.gym.sync_frame_time(self.sim)
+
+    def init_episode(self):
+        self.step_physics()
+        self.render()
+        self.update()
+        
+        states, states_tensor = self.get_states()
+        current_EE_pose     = states[3:6]
+        self.goal_dist_initial = np.linalg.norm(np.array(current_EE_pose) - np.array(self.cube_pose))
+        
+        return states_tensor
 
 
     def reset(self):
@@ -640,20 +667,18 @@ class Gym_env():
         # self.apply_rl_actions_force(np.zeros(6))
         self.apply_rl_actions_velocity(np.zeros(6))
         self.render()
-        self.update()
-        # Clear any graphical debug lines and choose a new goal
-        self.gym.clear_lines(self.viewer)
-        self.time_ep = 0
-        self.random_new_goal(False)
-        # Allow physics to settle at zero configuration
-        t_start = self.gym.get_sim_time(self.sim)
-        while self.gym.get_sim_time(self.sim) - t_start < 1:
-            self.step_physics()
-            self.render()
-        self.update()
-            
 
-        
+        # Clear any graphical debug lines and choose a new goal
+        if not self.server:
+            self.gym.clear_lines(self.viewer)
+        self.time_ep = 0
+        self.random_new_goal(True)
+        # Allow physics to settle at zero configuration
+
+        # time.sleep(1)
+        self.update()
+
+            
     #COMPLETE
     def apply_rl_actions(self, rl_actions=None):
         """Specify the actions to be performed by the rl agent(s).
@@ -736,7 +761,7 @@ class Gym_env():
             rl_actions      =   np.concatenate((rl_actions, [0.0, 0.0]))
             
             # action_np = rl_actions.astype(np.float32) * 1000.0 / 3 #100.0
-            action_np       =   rl_actions.astype(np.float32) * 0.02
+            action_np       =   rl_actions.astype(np.float32) * self.action_scale
             # print(f"rl_actions {action_np}")
             # action_np[1] =   abs(action_np[1])
             # action_np[1] = action_np[1] * 2.0
@@ -751,7 +776,6 @@ class Gym_env():
             # print(f"force tensor = {force_tensor}")
             # self.gym.set_actor_dof_position_targets(self.envs[i], self.piper_handles[i], action_np)
             self.gym.set_dof_velocity_target_tensor(self.sim, gymtorch.unwrap_tensor(velocity_tensor))
-    
     
     def apply_rl_actions_force_warmup(self, rl_actions=None):
 
@@ -873,10 +897,13 @@ class Gym_env():
         # distance from EE to the goal
         dist = torch.norm(current_EE_pose_tensor - goal_pose_tensor, p=2, dim=-1)
         
-        dist_reward = 1.0 / (1.0 + (2 * dist) ** 2)
+        # dist_reward = 1.0 / (1.0 + (2 * dist) ** 2)
         
-        if current_EE_pose[1] <= 0.08:
-            dist_reward -= 2
+        dist_reward = (2 * self.goal_dist_initial) / (self.goal_dist_initial + dist) - 1
+        dist_reward = dist_reward.detach().cpu().item() 
+        height_reward = 0
+        if current_EE_pose[1] <= 0.1:
+            height_reward = current_EE_pose[1] - 0.1
         
         
         # dist_reward = - 0.5 * (dist ** 2)
@@ -896,6 +923,14 @@ class Gym_env():
         #                                       current_EE_rot['z'],
         #                                       current_EE_rot['w']])
         
+        joint_velocity_targets   =  state[21:29]
+        mean_value = abs(joint_velocity_targets).mean()
+        # if self.time_counter % self.debug_interval == 0: print("mean_value=", mean_value)
+        if mean_value > 3:
+            velo_reward = - 0.5 * ((mean_value - 3) ** 2)
+        else:
+            velo_reward = 0.0
+
         '''# Normalize the quaternions 
         current_EE_rot_tensor = F.normalize(current_EE_rot_tensor, dim=0)
         goal_rot_tensor = F.normalize(goal_rot_tensor, dim=0)
@@ -915,30 +950,36 @@ class Gym_env():
         
         # rot_reward = rot_reward.detach().cpu().item()
         
-        dist_reward = dist_reward.detach().cpu().item()
-        rewards = self.dist_reward_scale * dist_reward - 1  #- math.sqrt(self.time_counter)
+        
+        
+        rewards = self.dist_reward_scale * dist_reward + height_reward * 0.5 + velo_reward * 1.0  #- math.sqrt(self.time_counter)
+        
         self.writer.add_scalar('Reward per step', rewards, self.time_ep)
         
-        done = (dist <= 0.10)
         
-        if done:
-            print("DONE DIST = ", dist.item())
-            rewards += 100
-            
-            
+        
+        if (dist <= 0.10):
+            success  = True
+            # print("DONE DIST = ", dist.item())
+            rewards += 1500
+        else:
+            success  = False
+            rewards -= 1
+            # print("NOT DONE DIST = ", dist.item())            
         if self.debug and self.time_counter % self.debug_interval == 0:
-            print(f"step: {self.time_counter},  dist= {dist:.3f}")
-            print(f"rewards: {rewards:3f}  dist_reward: {dist_reward:.3f} ") #rot_reward: {rot_reward:.3f}")
+            print(f"step: {self.time_counter}       dist= {dist:.3f}")
+            print(f"rewards: {rewards:3f}   dist_reward: {dist_reward:.3f}  height_reward: {height_reward:.3f}  velo_reward: {velo_reward:.3f}") #rot_reward: {rot_reward:.3f}")
         
-        
-        return rewards, done
+
+        return rewards, success
     
     
     #COMPLETE
     def stop_simulation(self):
         print("Done")
         # client.loop_stop() 
-        self.gym.destroy_viewer(self.viewer)
+        if not self.server:
+            self.gym.destroy_viewer(self.viewer)
         self.gym.destroy_sim(self.sim)
 
 # def main():

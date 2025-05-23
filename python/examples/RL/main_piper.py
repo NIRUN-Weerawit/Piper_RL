@@ -34,7 +34,7 @@ HORIZON = 800
 
 num_envs = 1
 
-warmup  = 2000
+warmup  = 3000
 
 args = dict(sim_device          = "cuda:0",
             pipeline            = "gpu",      #cpu/gpu
@@ -50,28 +50,28 @@ args = dict(sim_device          = "cuda:0",
             damping             = 200.0,
             debug               = True,
             headless            = True,
-            debug_interval      = 200,
-            dt                  = 0.01,  #time_step duration for executing command   
+            debug_interval      = 50,
+            dt                  = 0.1,  #time_step duration for executing command   
             warmup              = warmup,
             server              = False,
-            state_size                  = 21,
+            action_scale        = 2.0,
+            state_size                  = 29,
             action_size                 = 6,
-            hidden_size                 = 256,
-            lr_critic                   = 0.0005,
+            hidden_size                 = 128,
+            lr_critic                   = 0.0002,
             lr_actor                    = 0.0001,
             explore_noise               = 0.2,
-            noise_clip                  = 0.5,
+            noise_clip                  = 0.4,
             gamma                       = 0.99,
             batch_size                  = 128,  # batch_size
-            update_interval             = 1,  # model update interval (< actor model) 100
-            update_interval_actor       = 2,  # actor model update interval 500
-            target_update_interval      = 10,  # target model update interval 5000
+            update_interval             = 10,  # model update interval (< actor model) 100
+            update_interval_actor       = 20,  # actor model update interval 500
+            target_update_interval      = 200,  # target model update interval 5000
             soft_update_tau             = 0.001,  # soft update factor
             n_steps                     = 1,
             test_episodes               = 10,
             n_episodes                  = 500, 
-            max_episode_len             = 1000, 
-            warmup_step                 = 1000,
+            max_episode_len             = 400,
 )
 # Boundary of action space
 action_min = [-2.618, 0.0,  -2.697, -1.832, -1.22, -3.14, 0.0, -0.04] #Max. joints' limits
