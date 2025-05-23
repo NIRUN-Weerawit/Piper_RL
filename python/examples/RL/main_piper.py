@@ -34,7 +34,7 @@ HORIZON = 800
 
 num_envs = 1
 
-warmup  = 3000
+warmup  = 10000
 
 args = dict(sim_device          = "cuda:0",
             pipeline            = "gpu",      #cpu/gpu
@@ -44,7 +44,7 @@ args = dict(sim_device          = "cuda:0",
             subscenes           = 0, 
             slices              = None,
             num_envs            = num_envs,
-            dist_reward_scale   = 1.0,
+            dist_reward_scale   = 3.0,
             rot_reward_scale    = 0.1,
             stiffness           = 1000.0,
             damping             = 200.0,
@@ -54,16 +54,17 @@ args = dict(sim_device          = "cuda:0",
             dt                  = 0.1,  #time_step duration for executing command   
             warmup              = warmup,
             server              = False,
-            action_scale        = 2.0,
+            random_goal         = True,
+            action_scale        = 1.0,
             state_size                  = 29,
             action_size                 = 6,
             hidden_size                 = 128,
-            lr_critic                   = 0.0002,
+            lr_critic                   = 0.0005,
             lr_actor                    = 0.0001,
             explore_noise               = 0.2,
             noise_clip                  = 0.4,
             gamma                       = 0.99,
-            batch_size                  = 128,  # batch_size
+            batch_size                  = 64,  # batch_size
             update_interval             = 10,  # model update interval (< actor model) 100
             update_interval_actor       = 20,  # actor model update interval 500
             target_update_interval      = 200,  # target model update interval 5000

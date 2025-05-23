@@ -50,6 +50,7 @@ class Gym_env():
         self.warmup             = args['warmup']
         self.action_scale       = args['action_scale']
         self.server             = args['server'] 
+        self.random_goal        = args['random_goal']
         
         self.env                = None
         self.gym                = None     #self.gym = gymapi.acquire_gym()
@@ -467,17 +468,19 @@ class Gym_env():
     def random_new_goal(self, randomness=True):
         
         if randomness:
-            max_radius = 0.5
+            max_radius = 0.3
             min_radius = 0.2
             # Random point in spherical coordinates
             r = np.random.uniform(min_radius, max_radius)  # Random radius [0, 0.8]
-            theta = np.random.uniform(0, 2 * np.pi)  # Random azimuthal angle [0, 2pi]
-            phi = np.random.uniform(0, np.pi / 2)  # Random polar angle [0, pi/2] (upper hemisphere)
+            theta = np.random.uniform(- np.pi, np.pi )  # Random azimuthal angle [0, 2pi]
+            phi = np.random.uniform(0, np.pi )  # Random polar angle [0, pi/2] (upper hemisphere)
+            end_effector_position  = self.piper_body_states['pose']['p'][-3] 
+            print("end_effector_position", end_effector_position)
 
             # Convert spherical to Cartesian coordinates
-            x = r * np.sin(phi) * np.cos(theta)
-            z = r * np.sin(phi) * np.sin(theta)
-            y = r * np.cos(phi) 
+            x = r * np.sin(phi) * np.cos(theta) + end_effector_position['x']
+            y = r * np.cos(phi)                 + end_effector_position['y']
+            z = r * np.sin(phi) * np.sin(theta) + end_effector_position['z'] 
             # z = np.clip(z, 0.1, 0.8)
         else:
             # set_length = len(self.goal_set)
@@ -673,7 +676,7 @@ class Gym_env():
         if not self.server:
             self.gym.clear_lines(self.viewer)
         self.time_ep = 0
-        self.random_new_goal(True)
+        self.random_new_goal(self.random_goal)
         # Allow physics to settle at zero configuration
 
         # time.sleep(1)
@@ -886,13 +889,19 @@ class Gym_env():
         #TODO: right now, it is assumed that the end-effector is the link8, but in the future, it should be in the middle of the gripper
         # [goal_position 0-2, goal_orientation 3-6, end_effector_position 7-9, end_effector_orientation 10-13]
         
-        current_EE_pose     = state[3:6]
+        # current_EE_pose     = state[3:6]
+        current_EE_pose     =  self.piper_body_states['pose']['p'][-3] 
+        current_EE_pose     = [current_EE_pose['x'],
+                                     current_EE_pose['y'] ,
+                                     current_EE_pose['z']]
+        # print("current_EE_pose", current_EE_pose)
         # current_EE_pose = state[2]['pose']['p'][7]  #dict
         # current_EE_pose = [current_EE_pose['x'], 
         #                    current_EE_pose['y'], 
         #                    current_EE_pose['z']]  #list
-        current_EE_pose_tensor = torch.tensor(current_EE_pose)
         
+        # current_EE_pose_tensor = torch.tensor(current_EE_pose)
+        current_EE_pose_tensor = torch.tensor(current_EE_pose)
         #piper_body_states: state[2]['pose'/'vel']['p'/'r'][link: 0,1,2,3,4,5,6,7][x,y,z: 0,1,2]
         
         # distance from EE to the goal
@@ -924,13 +933,11 @@ class Gym_env():
         #                                       current_EE_rot['z'],
         #                                       current_EE_rot['w']])
         
-        joint_velocity_targets   =  state[21:29]
-        mean_value = abs(joint_velocity_targets).mean()
-        # if self.time_counter % self.debug_interval == 0: print("mean_value=", mean_value)
-        if mean_value > 3:
-            velo_reward = - 0.5 * ((mean_value - 3) ** 2)
-        else:
-            velo_reward = 0.0
+        sum_velocity_targets   =  np.array(self.piper_velocity_target).abs().sum()
+        
+        if sum_velocity_targets > 5.0:
+            print("sum_velocity_targets", sum_velocity_targets)
+            
 
         '''# Normalize the quaternions 
         current_EE_rot_tensor = F.normalize(current_EE_rot_tensor, dim=0)
@@ -953,13 +960,13 @@ class Gym_env():
         
         
         
-        rewards = self.dist_reward_scale * dist_reward + height_reward * 0.5 + velo_reward * 1.0  #- math.sqrt(self.time_counter)
+        rewards = self.dist_reward_scale * dist_reward + height_reward * 0.5   #- math.sqrt(self.time_counter)
         
         self.writer.add_scalar('Reward per step', rewards, self.time_ep)
         
         
         
-        if (dist <= 0.10):
+        if (dist <= 0.15):
             success  = True
             # print("DONE DIST = ", dist.item())
             rewards += 1500
