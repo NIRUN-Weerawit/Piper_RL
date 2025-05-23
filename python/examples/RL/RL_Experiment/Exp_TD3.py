@@ -43,6 +43,7 @@ class Experiment:
         self.test_episodes          = args['test_episodes']
         self.n_episodes             = args['n_episodes']
         self.max_episode_len        = args['max_episode_len']
+        self.server                 = args['server']
         self.action_min             = [-1] * 6
         self.action_max             = [1] * 6 
         
@@ -135,7 +136,7 @@ class Experiment:
         print(f"save_dir= {save_dir}")
         # debug_training = True
         if training:
-            Training_GRLModels(actor, GRL_TD3, self.n_episodes, self.max_episode_len, save_dir, debug_training, self.gym_instance, self.warmup)
+            Training_GRLModels(actor, GRL_TD3, self.n_episodes, self.max_episode_len, save_dir, debug_training, self.gym_instance, self.warmup, self.server)
         
         # Testing
         
