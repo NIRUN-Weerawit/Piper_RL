@@ -134,8 +134,8 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
             #     time.sleep(dt - elapsed)
                 
             else: 
-                if not server:   
-                    gym_instance.render() #This is for rendering the simulation, if you dont want to render, comment this line out
+                # if not server:   
+                gym_instance.render() #This is for rendering the simulation, if you dont want to render, comment this line out
                 
 
         previous_action = [0.0] * 6
