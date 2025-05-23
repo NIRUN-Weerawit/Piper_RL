@@ -976,7 +976,7 @@ class Gym_env():
             # print("NOT DONE DIST = ", dist.item())            
         if self.debug and self.time_counter % self.debug_interval == 0:
             print(f"step: {self.time_counter}       dist= {dist:.3f}")
-            print(f"rewards: {rewards:3f}   dist_reward: {dist_reward:.3f}  height_reward: {height_reward:.3f}  velo_reward: {velo_reward:.3f}") #rot_reward: {rot_reward:.3f}")
+            print(f"rewards: {rewards:3f}   dist_reward: {dist_reward:.3f}  height_reward: {height_reward:.3f}") #rot_reward: {rot_reward:.3f}")
         
 
         return rewards, success
