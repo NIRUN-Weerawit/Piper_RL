@@ -1,4 +1,5 @@
 # This python file includes the training and testing functions for the GRL model
+import os
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 import time
@@ -24,7 +25,7 @@ def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir
     Episode_Steps   = []  # Initialize the Steps matrix to hold the number of steps taken at task completion for each episode
     Average_Q       = []  # Initialize the Average Q matrix to hold the average Q value for each episode
     
-    writer = SummaryWriter('logs_train')
+    writer = SummaryWriter(os.path.join(save_dir,'logs_train'))
     
     print("#------------------------------------#")
     print("#----------Training Begins-----------#")
