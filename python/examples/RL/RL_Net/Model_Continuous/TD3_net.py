@@ -341,7 +341,7 @@ class NonGraph_Critic_Model(nn.Module):
         self.policy_3 = nn.Linear(hidden_size,      hidden_size)'''
 
         # Critic network
-        self.value = nn.Linear(hidden_size, 1)
+        self.value = nn.Linear(600, 1)
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # print("device:", self.device)
