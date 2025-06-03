@@ -102,7 +102,9 @@ class Experiment:
         actor_optimizer = torch.optim.Adam(actor.parameters(), lr=self.lr_actor)  # 
         critic_optimizer_1 = torch.optim.Adam(critic_1.parameters(), lr=self.lr_critic)  # 需要定义学习率
         critic_optimizer_2 = torch.optim.Adam(critic_2.parameters(), lr=self.lr_critic)  # 需要定义学习率
-
+        critic_optimizer_1_scheduler = torch.optim.lr_scheduler.ExponentialLR(critic_optimizer_1, gamma=0.99)  # 需要定义学习率衰减
+        critic_optimizer_2_scheduler = torch.optim.lr_scheduler.ExponentialLR(critic_optimizer_2, gamma=0.99)
+        actor_optimizer_scheduler    = torch.optim.lr_scheduler.ExponentialLR(actor_optimizer, gamma=0.99)
         # Replay_buffer
         replay_buffer = replay_buffer.ReplayBuffer(size=10 ** 6)
     
@@ -136,11 +138,11 @@ class Experiment:
         print(f"save_dir= {save_dir}")
         # debug_training = True
         if training:
-            Training_GRLModels(actor, GRL_TD3, self.n_episodes, self.max_episode_len, save_dir, debug_training, self.gym_instance, self.warmup, self.server)
+            Training_GRLModels(GRL_TD3, self.n_episodes, self.max_episode_len, save_dir, debug_training, self.gym_instance, self.warmup, self.server)
         
         # Testing
         
         load_dir = '/home/ucluser/isaacgym/python/examples/RL/RL_TrainedModels/TD3'
         # debug_testing = False
         if testing:
-            Testing_GRLModels(actor, GRL_TD3, self.test_episodes, self.max_episode_len, load_dir, debug_training, self.gym_instance)
+            Testing_GRLModels(GRL_TD3, self.test_episodes, self.max_episode_len, load_dir, debug_training, self.gym_instance)

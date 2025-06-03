@@ -4,7 +4,7 @@ import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 import time
 
-def Training_GRLModels(GRL_Net, GRL_model, n_episodes, max_episode_len, save_dir, debug, gym_instance, warmup, server):
+def Training_GRLModels(GRL_model, n_episodes, max_episode_len, save_dir, debug, gym_instance, warmup, server):
     """
         This function is a training function for the GRL model
 

@@ -205,20 +205,25 @@ class NonGraph_Actor_Model(nn.Module):
         2.F is the feature length of each vehicle
         3.A is the number of selectable actions
     """
-    def __init__(self, N, F, A, lr, action_min, action_max):
+    def __init__(self, N, A):
         super(NonGraph_Actor_Model, self).__init__()
         self.num_agents = N
         self.num_outputs = A
-        self.action_min = action_min
-        self.action_max = action_max
-
+        # self.action_min = action_min
+        # self.action_max = action_max
+        
+        # Encoder
+        self.encoder_1 = nn.Linear(N, 64)
+        self.encoder_2 = nn.Linear(64, 64)
+        
         # Policy network
-        self.policy_1 = nn.Linear(F, 32)
-        self.policy_2 = nn.Linear(32, 32)
-
+        self.policy_1 = nn.Linear(64, 512)  #800-600 was used before.
+        self.policy_2 = nn.Linear(512, 256)  #128-64 is bad
+        self.policy_3 = nn.Linear(256, 64)
+        
         # Actor network
-        self.mu = nn.Linear(32, A)
-        self.sigma = nn.Linear(32, A)
+        self.mu = nn.Linear(64, A)
+        self.sigma = nn.Linear(64, A)
 
         # GPU configuration
         if torch.cuda.is_available():
@@ -229,23 +234,20 @@ class NonGraph_Actor_Model(nn.Module):
 
         self.to(self.device)
 
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+        # self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
 
     def forward(self, observation):
-        """
-            1.The data type here is numpy.ndarray, which needs to be converted to a
-            Tensor data type.
-            2.Observation is the state observation matrix, including X_in, and RL_indice.
-            3.X_in is the node feature matrix, RL_indice is the reinforcement learning
-            index of controlled vehicles.
-        """
-
-        X_in, _, RL_indice = datatype_transmission(observation, self.device)
-
+        
+        #Encoding
+        X_in = F.relu(self.encoder_1(observation))
+        X_in = F.relu(self.encoder_2(X_in))  
+        
         # Policy
         X_policy = self.policy_1(X_in)
         X_policy = F.relu(X_policy)
         X_policy = self.policy_2(X_policy)
+        X_policy = F.relu(X_policy)
+        X_policy = self.policy_3(X_policy)
         X_policy = F.relu(X_policy)
 
         # mu and sigma
@@ -256,9 +258,10 @@ class NonGraph_Actor_Model(nn.Module):
         pi_sigma = torch.exp(pi_sigma)
         action_probabilities = torch.distributions.Normal(pi_mu, pi_sigma)
         action = action_probabilities.sample()
-        log_probs = action_probabilities.log_prob(action)
+        log_probs = action_probabilities.log_prob(action).sum()
+        
         # Action limitation
-        action = torch.clamp(action, min=self.action_min, max=self.action_max)
+        # action = torch.clamp(action, min=self.action_min, max=self.action_max)
 
         return action, log_probs, action_probabilities
 
@@ -270,19 +273,25 @@ class NonGraph_Critic_Model(nn.Module):
         2.F is the feature length of each vehicle
         3.A is the number of selectable actions
     """
-    def __init__(self, N, F, A, lr, action_min, action_max):
+    def __init__(self, N, A):
         super(NonGraph_Critic_Model, self).__init__()
         self.num_agents = N
         self.num_outputs = A
-        self.action_min = action_min
-        self.action_max = action_max
+        # self.action_min = action_min
+        # self.action_max = action_max
+        
+        # State Encoder
+        self.encoder_1 = nn.Linear(N, 64)
+        self.encoder_2 = nn.Linear(64, 64)
 
         # Policy network
-        self.policy_1 = nn.Linear(F, 32)
-        self.policy_2 = nn.Linear(32, 32)
+        self.policy_1 = nn.Linear(64, 256)  #800-600-400 was used before and it was good.
+        self.policy_2 = nn.Linear(256, 512) #256-512-512-256
+        self.policy_3 = nn.Linear(512, 256) #128-256-128-64 is bad
+        self.policy_4 = nn.Linear(256, 64)
 
         # Critic network
-        self.value = nn.Linear(32, 1)
+        self.value = nn.Linear(64, 1)
 
         # GPU configuration
         if torch.cuda.is_available():
@@ -293,7 +302,7 @@ class NonGraph_Critic_Model(nn.Module):
 
         self.to(self.device)
 
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+        # self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
 
     def forward(self, observation):
         """
@@ -303,20 +312,20 @@ class NonGraph_Critic_Model(nn.Module):
             3.X_in is the node feature matrix, RL_indice is the reinforcement learning
             index of controlled vehicles.
         """
-
-        X_in, _, RL_indice = datatype_transmission(observation, self.device)
-
+        N_encoded = F.relu(self.encoder_1(observation))
+        N_encoded = F.relu(self.encoder_2(N_encoded))
         # Policy
-        X_policy = self.policy_1(X_in)
+        X_policy = self.policy_1(N_encoded)
         X_policy = F.relu(X_policy)
         X_policy = self.policy_2(X_policy)
         X_policy = F.relu(X_policy)
-
-        # Mask
-        mask = torch.reshape(RL_indice, (self.num_agents, 1))
+        X_policy = self.policy_3(X_policy)
+        X_policy = F.relu(X_policy)
+        X_policy = self.policy_4(X_policy)
+        X_policy = F.relu(X_policy)
+        
 
         # Value
         value = self.value(X_policy)
-        value = torch.mul(value, mask)
 
         return value

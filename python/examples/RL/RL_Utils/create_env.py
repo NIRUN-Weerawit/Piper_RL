@@ -50,6 +50,7 @@ class Gym_env():
         self.warmup             = args['warmup']
         self.action_scale       = args['action_scale']
         self.server             = args['server'] 
+        self.headless           = args['headless']
         self.random_goal        = args['random_goal']
         
         self.env                = None
@@ -85,6 +86,7 @@ class Gym_env():
         self.sphere_geom        = None
 
         self.asset_root  = ("/home/wee_ucl/workspace/Piper_RL/assets/" if self.server else "/home/ucluser/isaacgym/assets")
+        # self.asset_root  = "/home/ucluser/isaacgym/assets"
         
         self.piper_lower_limits = []
         self.piper_upper_limits = []
@@ -218,7 +220,7 @@ class Gym_env():
             quit()
 
         # Create viewer
-        if not self.server:
+        if not self.headless:
             self.viewer = self.gym.create_viewer(self.sim, gymapi.CameraProperties())
             if self.viewer is None:
                 print("*** Failed to create viewer")
@@ -330,7 +332,7 @@ class Gym_env():
             self.gym.enable_actor_dof_force_sensors(env, piper_handle)
             
             body_dict = self.gym.get_actor_rigid_body_dict(env, piper_handle)
-            if not self.server:
+            if not self.headless:
                 gymutil.draw_lines(self.sphere_geom, self.gym, self.viewer, self.envs[i], goal_pose)
 
             self.piper_handles.append(piper_handle)
@@ -365,7 +367,7 @@ class Gym_env():
         # Point camera at environments
         cam_pos = gymapi.Vec3(4, 3, 3)
         cam_target = gymapi.Vec3(-4, -3, 0)
-        if not self.server:
+        if not self.headless:
             self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
         
         dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
@@ -498,7 +500,7 @@ class Gym_env():
         goal_pose.r = gymapi.Quat(rand_quat[0], rand_quat[1], rand_quat[2], rand_quat[3])
         print(f"New goal pose: {self.cube_pose[0]:.2f}, {self.cube_pose[1]:.2f}, {self.cube_pose[2]:.2f}")
         for i in range(self.num_envs):
-            if not self.server:
+            if not self.headless:
                 gymutil.draw_lines(self.sphere_geom, self.gym, self.viewer, self.envs[i], goal_pose)
         # self.render()
     
@@ -636,7 +638,7 @@ class Gym_env():
 
     def render(self):
         # Step rendering
-        if not self.server:
+        if not self.headless:
             self.gym.step_graphics(self.sim)
             self.gym.draw_viewer(self.viewer, self.sim, False)
         self.gym.sync_frame_time(self.sim)
@@ -674,7 +676,7 @@ class Gym_env():
         self.render()
 
         # Clear any graphical debug lines and choose a new goal
-        if not self.server:
+        if not self.headless:
             self.gym.clear_lines(self.viewer)
         self.time_ep = 0
         self.random_new_goal(self.random_goal)
@@ -909,14 +911,19 @@ class Gym_env():
         dist = torch.norm(current_EE_pose_tensor - goal_pose_tensor, p=2, dim=-1)
         
         # dist_reward = 1.0 / (1.0 + (2 * dist) ** 2)
-        
-        dist_reward = (2 * self.goal_dist_initial) / (self.goal_dist_initial + dist) - 1
-        dist_reward = dist_reward.detach().cpu().item() 
+        dist = dist.detach().cpu().item()
+        # dist_reward = (2 * self.goal_dist_initial) / (self.goal_dist_initial + dist) - 1
+        if dist < 0.15:
+            dist_reward = 1.0
+            success = True
+        else:
+            dist_reward = np.exp(-2 * dist / self.goal_dist_initial) - 1
+            success = False
+         
         height_reward = 0
         if current_EE_pose[1] <= 0.1:
             height_reward = current_EE_pose[1] - 0.1
-        
-        
+                
         # dist_reward = - 0.5 * (dist ** 2)
         # dist_reward = dist
         # dist_reward *= dist_reward
@@ -958,29 +965,21 @@ class Gym_env():
         
         # rot_reward = rot_reward.detach().cpu().item()
         
-        
-        
-        rewards = self.dist_reward_scale * dist_reward + height_reward * 0.5   #- math.sqrt(self.time_counter)
-        if sum_velocity_targets > 5.5:
+        if sum_velocity_targets > 12:
             # print("sum_velocity_targets", sum_velocity_targets)
-            rewards -= 4 * (sum_velocity_targets - 5.5)
+            vel_reward =   - 1 * (sum_velocity_targets - 12)
             # done = True
-        
-        
-        
-        if (dist <= 0.15):
-            success     = True
-            # done        = True
-            # print("DONE DIST = ", dist.item())
-            rewards     += 1000
         else:
-            success     = False
-            # done        = False
-            rewards     -= 0.5
+            vel_reward = 0.0
+        
+        rewards = self.dist_reward_scale * dist_reward + height_reward * 5 + vel_reward * 0.5   #- math.sqrt(self.time_counter)
+        
+
+
             # print("NOT DONE DIST = ", dist.item())            
         if self.debug and self.time_counter % self.debug_interval == 0 or success:
             print(f"step: {self.time_counter}       dist= {dist:.3f}")
-            print(f"rewards: {rewards:3f}   dist_reward: {dist_reward:.3f}  height_reward: {height_reward:.3f}") #rot_reward: {rot_reward:.3f}")
+            print(f"rewards: {rewards:3f}   dist_reward: {dist_reward:.3f}, height_reward: {height_reward:.3f}, velocity_reward: {vel_reward:.3f}") #rot_reward: {rot_reward:.3f}")
         
         # self.writer.add_scalar('Reward per step', rewards, self.time_ep)
         
@@ -991,7 +990,7 @@ class Gym_env():
     def stop_simulation(self):
         print("Done")
         # client.loop_stop() 
-        if not self.server:
+        if not self.headless:
             self.gym.destroy_viewer(self.viewer)
         self.gym.destroy_sim(self.sim)
 

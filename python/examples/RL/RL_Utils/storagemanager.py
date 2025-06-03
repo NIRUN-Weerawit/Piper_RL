@@ -27,6 +27,22 @@ class StorageManager:
         os.makedirs(session_dir)
         self.session = self.session
         self.session_dir = session_dir
+        
+    def find_latest_session(self):
+        if not os.path.exists(self.machine_dir):
+            print(f"Machine directory does not exist: {self.machine_dir}")
+            return None
+        
+        sessions = [d for d in os.listdir(self.machine_dir) if os.path.isdir(os.path.join(self.machine_dir, d)) and d.startswith(self.name)]
+        if not sessions:
+            print(f"No sessions found for {self.name} in {self.machine_dir}")
+            return None
+        
+        latest_session = max(sessions, key=lambda x: int(x.split('_')[-1]))
+        self.session = latest_session
+        self.session_dir = os.path.join(self.machine_dir, latest_session)
+        print(f"Latest session found: {self.session}")
+        # return self.session
 
     def delete_file(path):
         if os.path.exists(path):
@@ -65,13 +81,26 @@ class StorageManager:
 
     def store_model(self, model):
         model_path = os.path.join(self.session_dir, '_agent.pth')
-        torch.save({'actor': model.actor_model.state_dict(),
-                    'critic_1': model.critic_model_1.state_dict(),
-                    'critic_2': model.critic_model_2.state_dict(),
-                    'actor_optimizer': model.actor_optimizer.state_dict(),
-                    'critic_1_optimizer': model.critic_optimizer_1.state_dict(),
-                    'critic_2_optimizer': model.critic_optimizer_2.state_dict(),
-                }, os.path.join(self.session_dir, '_agent.pth'))
+        if self.name == 'TD3':
+            torch.save({
+                'actor': model.actor.state_dict(),
+                'critic_1': model.critic_1.state_dict(),
+                'critic_2': model.critic_2.state_dict(),
+                'actor_optimizer': model.actor_optimizer.state_dict(),
+                'critic_1_optimizer': model.critic_optimizer_1.state_dict(),
+                'critic_2_optimizer': model.critic_optimizer_2.state_dict(),
+            }, model_path)
+        elif self.name == 'PPO':
+            # Assuming PPO model has actor_model and critic_model attributes
+            if hasattr(model, 'actor_model') and hasattr(model, 'critic_model'):
+                torch.save({
+                    'actor': model.actor_model.state_dict(),
+                    'critic_1': model.critic_model.state_dict(),
+
+                }, model_path)
+            else:
+                print("Model does not have the expected attributes for saving.")
+       
         
     def store_config(self, config):
         config_path = os.path.join(self.session_dir, 'config.txt')

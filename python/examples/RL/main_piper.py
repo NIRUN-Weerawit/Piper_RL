@@ -44,35 +44,36 @@ args = dict(sim_device          = "cuda:0",
             subscenes           = 0, 
             slices              = None,
             num_envs            = num_envs,
-            dist_reward_scale   = 3.0,
+            dist_reward_scale   = 1.0,
             rot_reward_scale    = 0.1,
             stiffness           = 1000.0,
             damping             = 200.0,
             debug               = True,
             headless            = True,
-            debug_interval      = 50,
+            debug_interval      = 200,
             dt                  = 0.1,  #time_step duration for executing command   
             warmup              = warmup,
-            server              = False,
+            server              = True,
             random_goal         = True,
             action_scale        = 1.0,
             state_size                  = 29,
             action_size                 = 6,
             hidden_size                 = 256,
-            lr_critic                   = 0.0005,
+            lr_critic                   = 0.0002,
             lr_actor                    = 0.0001,
             explore_noise               = 0.2,
             noise_clip                  = 0.4,
             gamma                       = 0.99,
-            batch_size                  = 256,  # batch_size
-            update_interval             = 1,  # model update interval (< actor model) 100
+            batch_size                  = 100   ,  # batch_size
+            update_interval             = 300,  # model update interval (< actor model) 100
             update_interval_actor       = 2,  # actor model update interval 500
             target_update_interval      = 200,  # target model update interval 5000
             soft_update_tau             = 0.001,  # soft update factor
             n_steps                     = 1,
             test_episodes               = 10,
-            n_episodes                  = 500, 
-            max_episode_len             = 200,
+            n_episodes                  = 2000, 
+            max_episode_len             = 300,
+            
 )
 # Boundary of action space
 action_min = [-2.618, 0.0,  -2.697, -1.832, -1.22, -3.14, 0.0, -0.04] #Max. joints' limits
@@ -84,8 +85,9 @@ action_max = [ 2.618, 3.14,  0.0,    1.832,  1.22,  3.14, 0.04, 0.0 ]  #Min. joi
 
 # simulation start
 from RL_Experiment.Exp_TD3 import Experiment
-
-exp = Experiment(args)
+from RL_Experiment.FE_PPO import Experiment as Experiment_PPO
+# exp = Experiment(args)
+exp = Experiment_PPO(args)
 # run the sumo simulation
 exp.run(num_envs=num_envs,
         training=TRAINING, testing=TESTING,
