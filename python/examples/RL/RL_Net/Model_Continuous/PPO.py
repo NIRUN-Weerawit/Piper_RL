@@ -214,16 +214,16 @@ class NonGraph_Actor_Model(nn.Module):
         
         # Encoder
         self.encoder_1 = nn.Linear(N, 64)
-        self.encoder_2 = nn.Linear(64, 64)
+        self.encoder_2 = nn.Linear(64, 128)
         
         # Policy network
-        self.policy_1 = nn.Linear(64, 512)  #800-600 was used before.
-        self.policy_2 = nn.Linear(512, 256)  #128-64 is bad
-        self.policy_3 = nn.Linear(256, 64)
+        self.policy_1 = nn.Linear(128, 1024)  #800-600 was used before.
+        self.policy_2 = nn.Linear(1024, 512)  #128-64 is bad
+        self.policy_3 = nn.Linear(512, 128)
         
         # Actor network
-        self.mu = nn.Linear(64, A)
-        self.sigma = nn.Linear(64, A)
+        self.mu = nn.Linear(128, A)
+        self.sigma = nn.Linear(128, A)
 
         # GPU configuration
         if torch.cuda.is_available():
@@ -282,13 +282,13 @@ class NonGraph_Critic_Model(nn.Module):
         
         # State Encoder
         self.encoder_1 = nn.Linear(N, 64)
-        self.encoder_2 = nn.Linear(64, 64)
+        self.encoder_2 = nn.Linear(64, 128)
 
         # Policy network
-        self.policy_1 = nn.Linear(64, 256)  #800-600-400 was used before and it was good.
-        self.policy_2 = nn.Linear(256, 512) #256-512-512-256
-        self.policy_3 = nn.Linear(512, 256) #128-256-128-64 is bad
-        self.policy_4 = nn.Linear(256, 64)
+        self.policy_1 = nn.Linear(128, 512)  #800-600-400 was used before and it was good.
+        self.policy_2 = nn.Linear(512, 1024) #256-512-512-256
+        self.policy_3 = nn.Linear(1024, 512) #128-256-128-64 is bad
+        self.policy_4 = nn.Linear(512, 64)
 
         # Critic network
         self.value = nn.Linear(64, 1)
