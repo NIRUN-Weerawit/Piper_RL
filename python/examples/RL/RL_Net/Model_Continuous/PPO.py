@@ -120,6 +120,10 @@ class Graph_Actor_Model(nn.Module):
         X_policy = F.relu(X_policy)
         X_policy = self.policy_2(X_policy)
         X_policy = F.relu(X_policy)
+        X_policy = self.policy_3(X_policy)
+        X_policy = F.relu(X_policy)
+        X_policy = self.policy_4(X_policy)
+        X_policy = F.relu(X_policy)
 
         # mu and sigma
         pi_mu = self.mu(X_policy)
