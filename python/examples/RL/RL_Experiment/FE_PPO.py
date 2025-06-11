@@ -79,14 +79,17 @@ class Experiment:
         # Initialize GRL model
         N = self.N
         A = self.A
+        F = 8 # Number of features in the graph model
+        action_min = [-3.1415, - 3.40339, -3.1415, -3.92699, -3.92699, -3.92699]  # Min. joints' velocities limits
+        action_max = [3.1415, 3.40339, 3.1415, 3.92699, 3.92699, 3.92699] 
 
         assert isinstance(Graph, bool)
         if Graph:
             from RL_Net.Model_Continuous.PPO import Graph_Actor_Model, \
                 Graph_Critic_Model 
 
-            GRL_actor = Graph_Actor_Model(N, A)
-            GRL_critic = Graph_Critic_Model(N, A)
+            GRL_actor = Graph_Actor_Model(F, 1, action_min, action_max)
+            GRL_critic = Graph_Critic_Model(F, 1, action_min, action_max)
         else:
             from RL_Net.Model_Continuous.PPO import NonGraph_Actor_Model, \
                 NonGraph_Critic_Model
@@ -99,13 +102,13 @@ class Experiment:
         actor_optimizer_scheduler    = torch.optim.lr_scheduler.ExponentialLR(actor_optimizer, gamma=0.9999)
         
         # Discount factor
-        gamma = 0.99
+        gamma = 0.98
         # GAE factor
         GAE_lambda = 0.95
         # Policy clip factor
         policy_clip = 0.2
         
-        schedule_update_interval = 50
+        schedule_update_interval = self.batch_size
         
         # Initialize GRL agent
         GRL_PPO = PPO_agent.PPO(
