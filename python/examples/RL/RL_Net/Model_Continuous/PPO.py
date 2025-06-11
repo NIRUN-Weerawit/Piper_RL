@@ -50,19 +50,22 @@ class Graph_Actor_Model(nn.Module):
 
         # Encoder
         self.encoder_1 = nn.Linear(F, 64)
-        self.encoder_2 = nn.Linear(64, 256)
+        self.encoder_2 = nn.Linear(64, 64)
 
         # GNN
-        self.GraphConv = GCNConv(256, 512)
-        self.GraphConv_Dense = nn.Linear(512, 256)
+        self.GraphConv_1 = GCNConv(64, 64)
+        self.GraphConv_2 = GCNConv(64, 64)
+        self.GraphConv_Dense = nn.Linear(64, 64)
 
         # Policy network
-        self.policy_1 = nn.Linear(512, 512)
-        self.policy_2 = nn.Linear(512, 64)
+        self.policy_1 = nn.Linear(128, 512)
+        self.policy_2 = nn.Linear(512, 512)
+        self.policy_3 = nn.Linear(512, 128)  
+        self.policy_4 = nn.Linear(128, 32) 
 
         # Actor network
-        self.mu = nn.Linear(64, A)
-        self.sigma = nn.Linear(64, A)
+        self.mu = nn.Linear(32, A)
+        self.sigma = nn.Linear(32, A)
 
         # GPU configuration
         if torch.cuda.is_available():
@@ -150,15 +153,21 @@ class Graph_Critic_Model(nn.Module):
         self.encoder_2 = nn.Linear(64, 256)
 
         # GNN
-        self.GraphConv = GCNConv(256, 512)
-        self.GraphConv_Dense = nn.Linear(512, 256)
+        self.GraphConv_1 = GCNConv(64, 64)
+        self.GraphConv_2 = GCNConv(64, 64)
+        self.GraphConv_Dense = nn.Linear(64, 64)
 
         # Policy network
-        self.policy_1 = nn.Linear(512, 512)
-        self.policy_2 = nn.Linear(512, 64)
+        self.policy_1 = nn.Linear(128, 800)
+        self.policy_2 = nn.Linear(800, 600)
+        self.policy_3 = nn.Linear(600, 400)  
+        self.policy_4 = nn.Linear(400, 200) 
+        
+        """self.policy_1 = nn.Linear(512, 512)
+        self.policy_2 = nn.Linear(512, 64)"""
 
         # Critic network
-        self.value = nn.Linear(64, 1)
+        self.value = nn.Linear(200, 1)
 
         # GPU configuration
         if torch.cuda.is_available():
@@ -204,6 +213,10 @@ class Graph_Critic_Model(nn.Module):
         X_policy = self.policy_1(F_concat)
         X_policy = F.relu(X_policy)
         X_policy = self.policy_2(X_policy)
+        X_policy = F.relu(X_policy)
+        X_policy = self.policy_3(X_policy)
+        X_policy = F.relu(X_policy)
+        X_policy = self.policy_4(X_policy)
         X_policy = F.relu(X_policy)
 
         # Mask
