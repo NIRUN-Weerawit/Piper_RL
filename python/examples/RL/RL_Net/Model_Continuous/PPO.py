@@ -201,7 +201,9 @@ class Graph_Critic_Model(nn.Module):
 
         # GCN
         A_in_Sparse, _ = dense_to_sparse(A_in_Dense)
-        X_graph = self.GraphConv(X, A_in_Sparse)
+        X_graph = self.GraphConv_1(X, A_in_Sparse)
+        X_graph = F.relu(X_graph)
+        X_graph = self.GraphConv_2(X_graph, A_in_Sparse)
         X_graph = F.relu(X_graph)
         X_graph = self.GraphConv_Dense(X_graph)
         X_graph = F.relu(X_graph)
