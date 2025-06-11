@@ -156,7 +156,7 @@ class Graph_Critic_Model(nn.Module):
 
         # Encoder
         self.encoder_1 = nn.Linear(F, 64)
-        self.encoder_2 = nn.Linear(64, 256)
+        self.encoder_2 = nn.Linear(64, 64)
 
         # GNN
         self.GraphConv_1 = GCNConv(64, 64)
