@@ -966,7 +966,7 @@ class Gym_env():
         # [goal_position 0-2, goal_orientation 3-6, end_effector_position 7-9, end_effector_orientation 10-13]
         
         # current_EE_pose     = state[3:6]
-        current_EE_pose     =  self.piper_body_states['pose']['p'][-3] 
+        current_EE_pose     =  self.piper_body_states['pose']['p'][-1] 
         current_EE_pose     = [current_EE_pose['x'],
                                      current_EE_pose['y'] ,
                                      current_EE_pose['z']]
