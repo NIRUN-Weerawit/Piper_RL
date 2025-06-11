@@ -43,6 +43,7 @@ class Experiment:
         self.n_steps                = args['n_steps']
         self.test_episodes          = args['test_episodes']
         self.n_episodes             = args['n_episodes']
+        self.n_epochs               = args['n_epochs']
         self.max_episode_len        = args['max_episode_len']
         self.server                 = args['server']
         self.action_min             = [-1] * 6
@@ -79,7 +80,7 @@ class Experiment:
         # Initialize GRL model
         N = self.N
         A = self.A
-        F = 8 # Number of features in the graph model
+        F = 11 # Number of features in the graph model
         action_min = [-3.1415, - 3.40339, -3.1415, -3.92699, -3.92699, -3.92699]  # Min. joints' velocities limits
         action_max = [3.1415, 3.40339, 3.1415, 3.92699, 3.92699, 3.92699] 
 
@@ -123,7 +124,7 @@ class Experiment:
             GAE_lambda,  # GAE factor
             policy_clip,  # policy clip factor
             batch_size=self.batch_size,  # batch_size < update_interval
-            n_epochs=4,  # update times for one batch_size
+            n_epochs=self.n_epochs,  # update times for one batch_size
             update_interval=self.update_interval,  # update interval
             model_name="PPO_Model"  # model
         )

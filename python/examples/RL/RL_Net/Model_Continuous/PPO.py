@@ -49,20 +49,20 @@ class Graph_Actor_Model(nn.Module):
         
 
         # Encoder
-        self.encoder_1 = nn.Linear(F, 32)
-        self.encoder_2 = nn.Linear(32, 32)
+        self.encoder_1 = nn.Linear(F, 64)
+        self.encoder_2 = nn.Linear(64, 256)
 
         # GNN
-        self.GraphConv = GCNConv(32, 32)
-        self.GraphConv_Dense = nn.Linear(32, 32)
+        self.GraphConv = GCNConv(256, 512)
+        self.GraphConv_Dense = nn.Linear(512, 256)
 
         # Policy network
-        self.policy_1 = nn.Linear(64, 32)
-        self.policy_2 = nn.Linear(32, 32)
+        self.policy_1 = nn.Linear(512, 512)
+        self.policy_2 = nn.Linear(512, 64)
 
         # Actor network
-        self.mu = nn.Linear(32, A)
-        self.sigma = nn.Linear(32, A)
+        self.mu = nn.Linear(64, A)
+        self.sigma = nn.Linear(64, A)
 
         # GPU configuration
         if torch.cuda.is_available():
@@ -146,19 +146,19 @@ class Graph_Critic_Model(nn.Module):
         self.action_max = action_max
 
         # Encoder
-        self.encoder_1 = nn.Linear(F, 32)
-        self.encoder_2 = nn.Linear(32, 32)
+        self.encoder_1 = nn.Linear(F, 64)
+        self.encoder_2 = nn.Linear(64, 256)
 
         # GNN
-        self.GraphConv = GCNConv(32, 32)
-        self.GraphConv_Dense = nn.Linear(32, 32)
+        self.GraphConv = GCNConv(256, 512)
+        self.GraphConv_Dense = nn.Linear(512, 256)
 
         # Policy network
-        self.policy_1 = nn.Linear(64, 32)
-        self.policy_2 = nn.Linear(32, 32)
+        self.policy_1 = nn.Linear(512, 512)
+        self.policy_2 = nn.Linear(512, 64)
 
         # Critic network
-        self.value = nn.Linear(32, 1)
+        self.value = nn.Linear(64, 1)
 
         # GPU configuration
         if torch.cuda.is_available():
