@@ -56,12 +56,12 @@ class PPOMemory(object):
                batches'''
 
             # Convert lists to tensors
-        states = torch.stack(self.states)
-        actions = torch.stack(self.actions)
-        probs = torch.stack(self.probs)
-        vals = torch.stack(self.vals)
-        rewards = torch.tensor(self.rewards)
-        dones = torch.tensor(self.dones)
+        states      = torch.stack(self.states)
+        actions     = torch.stack(self.actions)
+        probs       = torch.stack(self.probs)
+        vals        = torch.stack(self.vals)
+        rewards     = torch.tensor(self.rewards)
+        dones       = torch.tensor(self.dones)
 
         # Generate random permutation of indices
         n_states = states.size(0)
@@ -206,6 +206,7 @@ class PPO(object):
           --------
           observation: the environment observation of the smart body
         """
+        # print("observation shape:", observation.shape)
         action, probs, _ = self.actor_model(observation)
         value = self.critic_model(observation)
 
@@ -236,7 +237,8 @@ class PPO(object):
 
             # ------Training for each epochs------ #
             # advantage
-            advantage = torch.zeros(len(reward_arr)).to(self.device)
+            advantage = torch.zeros(len(reward_arr), len(action_arr[1])).to(self.device)
+            # advantage = torch.zeros(len(reward_arr)).to(self.device)
             # print("advantage shape:", advantage.shape)
             for t in range(len(reward_arr) - 1):
                 discount = 1
@@ -245,7 +247,8 @@ class PPO(object):
                     a_t += discount * (reward_arr[k] + self.gamma * values[k + 1] *
                                        (1 - int(dones_arr[k])) - values[k])
                     discount *= self.gamma * self.GAE_lambda
-                advantage[t] = a_t
+                # advantage[t] = a_t
+                advantage[t, :] = a_t
             # print("advantage shape:", advantage.shape)
             # advantage = torch.stack(advantage)
 
@@ -263,9 +266,28 @@ class PPO(object):
                 actor_loss_matrix = []
                 critic_loss_matrix = []
                 
-                old_probs = old_prob_arr.detach()
-                actions = action_arr.detach()
+                for i in batch:
+                    old_probs = old_prob_arr[i].detach()
+                    actions = action_arr[i].detach()
 
+                    _, _, dist = self.actor_model(state_arr[i])
+
+                    new_probs = dist.log_prob(actions)
+                    prob_ratio = new_probs.exp() / old_probs.exp()
+                    weighted_probs = advantage[i].detach() * prob_ratio  # PPO1
+                    # ------PPO2------#
+                    weighted_clipped_probs = torch.clamp(prob_ratio, 1 - self.policy_clip,
+                                                     1 + self.policy_clip) * advantage[i].detach()
+                    # ----------------#
+                    actor_loss = -torch.min(weighted_probs, weighted_clipped_probs).mean()
+
+                    actor_loss_matrix.append(actor_loss)
+
+                actor_loss_matrix = torch.stack(actor_loss_matrix)
+                
+                """old_probs = old_prob_arr.detach()
+                actions = action_arr.detach()
+                print("state_arr shape:", state_arr.shape)
                 _, _, dist = self.actor_model(state_arr)
 
                 new_probs = dist.log_prob(actions).sum()
@@ -278,19 +300,18 @@ class PPO(object):
                 weighted_clipped_probs = torch.clamp(prob_ratio, 1 - self.policy_clip,
                                                     1 + self.policy_clip) * advantage.detach()
                 # ----------------#
-                actor_loss = -torch.min(weighted_probs, weighted_clipped_probs).mean()
+                actor_loss = -torch.min(weighted_probs, weighted_clipped_probs).mean()"""
 
                 # actor_loss_matrix.append(actor_loss)
 
                 # actor_loss_matrix = torch.stack(actor_loss_matrix)
-                actor_loss_mean = torch.mean(actor_loss)
+                actor_loss_mean = torch.mean(actor_loss_matrix)
 
                 self.actor_optimizer.zero_grad()
                 actor_loss_mean.backward()
                 self.actor_optimizer.step()
 
-                # Calculate critic_loss and update the critic network
-                
+                """# Calculate critic_loss and update the critic network
                 critic_value = self.critic_model(state_arr)
                 # print("critic_value shape:", critic_value.shape)
                 critic_value = torch.squeeze(critic_value)
@@ -300,7 +321,7 @@ class PPO(object):
                 returns = advantage + values
                 # print("returns shape:", returns.shape)
                 returns = returns.detach()
-                returns = torch.squeeze(returns)
+                # returns = torch.squeeze(returns)
                 
                 # critic_value = self.critic_model(state_arr[i])
                 # critic_value = torch.squeeze(critic_value)
@@ -311,15 +332,31 @@ class PPO(object):
                 
                 critic_loss = F.smooth_l1_loss(returns, critic_value)
 
-                # critic_loss_matrix.append(critic_loss)
+                # critic_loss_matrix.append(critic_loss)"""
 
-                # critic_loss_matrix = torch.stack(critic_loss_matrix)
+                for i in batch:
+                    critic_value = self.critic_model(state_arr[i])
+                    critic_value = torch.squeeze(critic_value)
+
+                    returns = advantage[i] + values[i]
+                    returns = returns.detach()
+                    critic_loss = F.smooth_l1_loss(returns, critic_value)
+
+                    critic_loss_matrix.append(critic_loss)
+                
+                critic_loss_matrix = torch.stack(critic_loss_matrix)
+    
                 critic_loss_mean = 0.5 * torch.mean(critic_loss)
+
+
 
                 self.critic_optimizer.zero_grad()
                 critic_loss_mean.backward()
                 self.critic_optimizer.step()
+                
+                
 
+                
                 # self.loss_record.append(float((actor_loss_mean + critic_loss_mean).detach().cpu().numpy()))
                 self.loss_record_critic.append(float((critic_loss_mean).detach().cpu().numpy()))
                 self.loss_record_actor.append(float((actor_loss_mean).detach().cpu().numpy()))

@@ -108,7 +108,7 @@ class StorageManager:
         # with open(config_path_1, 'wb') as f:
         #     f.write(pickle.dumps(config))
         with open(config_path, 'w') as file:
-            file.write(json.dumps(config))
+            file.write(json.dumps(config, indent= 4))
             
         # torch.save(config, config_path)
     # ------------------------------- LOADING -------------------------------

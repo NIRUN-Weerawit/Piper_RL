@@ -5,19 +5,33 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
 from torch_geometric.utils import dense_to_sparse
 
+N = 6  # Number of joints/nodes
+adjacency = np.eye(N)  # Start with self-connections
+
+for i in range(N - 1):
+    adjacency[i, i + 1] = 1  # Connect i to i+1
+    adjacency[i + 1, i] = 1  # Connect i+1 to i
 
 def datatype_transmission(states, device):
     """
-        1.This function is used to convert observations in the environment to the
+        1. This function is used to convert observations in the environment to the
         float32 Tensor data type that pytorch can accept.
-        2.Pay attention: Depending on the characteristics of the data structure of
+        2. Pay attention: Depending on the characteristics of the data structure of
         the observation, the function needs to be changed accordingly.
+        
+        - Returns:
+            - features: Node feature matrix (NxF)
+            
+            - adjacency: Dense adjacency matrix (NxN)
+            
+            - mask: Mask for controlled vehicles (Nx1)
     """
-    features = torch.as_tensor(states[0], dtype=torch.float32, device=device)
-    adjacency = torch.as_tensor(states[1], dtype=torch.float32, device=device)
-    mask = torch.as_tensor(states[2], dtype=torch.float32, device=device)
 
-    return features, adjacency, mask
+    Features = torch.as_tensor(states, dtype=torch.float32, device=device)
+    Adjacency = torch.as_tensor(adjacency, dtype=torch.float32, device=device)
+    Mask = torch.as_tensor(np.ones((6, 1)), dtype=torch.float32, device=device)
+
+    return Features, Adjacency, Mask
 
 
 # ------Graph Actor Model------ #
@@ -27,12 +41,12 @@ class Graph_Actor_Model(nn.Module):
         2.F is the feature length of each vehicle
         3.A is the number of selectable actions
     """
-    def __init__(self, N, F, A, lr, action_min, action_max):
+    def __init__(self, F, A, action_min, action_max):
         super(Graph_Actor_Model, self).__init__()
-        self.num_agents = N
         self.num_outputs = A
-        self.action_min = action_min
-        self.action_max = action_max
+        self.action_min = torch.tensor(action_min, dtype=torch.float32)
+        self.action_max = torch.tensor(action_max, dtype=torch.float32)
+        
 
         # Encoder
         self.encoder_1 = nn.Linear(F, 32)
@@ -58,8 +72,8 @@ class Graph_Actor_Model(nn.Module):
             self.device = "cpu"
 
         self.to(self.device)
-
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+        self.action_min = self.action_min.to(self.device)
+        self.action_max = self.action_max.to(self.device)
 
     def forward(self, observation):
         """
@@ -74,6 +88,8 @@ class Graph_Actor_Model(nn.Module):
         """
 
         X_in, A_in_Dense, RL_indice = datatype_transmission(observation, self.device)
+        # print("X_in.shape:", X_in.shape)
+        # print("A_in_Dense.shape:", A_in_Dense.shape)
 
         # Encoder
         X = self.encoder_1(X_in)
@@ -87,10 +103,13 @@ class Graph_Actor_Model(nn.Module):
         X_graph = F.relu(X_graph)
         X_graph = self.GraphConv_Dense(X_graph)
         X_graph = F.relu(X_graph)
+        # print("X shape:", X.shape)
+        # print("X_graph shape:", X_graph.shape)
+       
 
         # Feature concatenation
-        F_concat = torch.cat((X_graph, X), 1)
-
+        F_concat = torch.cat((X_graph, X), dim=1)
+        # print("F_concat shape:", F_concat.shape)
         # Policy
         X_policy = self.policy_1(F_concat)
         X_policy = F.relu(X_policy)
@@ -107,8 +126,9 @@ class Graph_Actor_Model(nn.Module):
         action = action_probabilities.sample()
         log_probs = action_probabilities.log_prob(action)
         # Action limitation
-        action = torch.clamp(action, min=self.action_min, max=self.action_max)
-
+        # print("action.shape:", action.shape)
+        action = torch.clamp(action, min=self.action_min.view(-1,1), max=self.action_max.view(-1,1))
+        # print("action.shape:", action.shape)
         return action, log_probs, action_probabilities
 
 
@@ -119,9 +139,8 @@ class Graph_Critic_Model(nn.Module):
         2.F is the feature length of each vehicle
         3.A is the number of selectable actions
     """
-    def __init__(self, N, F, A, lr, action_min, action_max):
+    def __init__(self, F, A, action_min, action_max):
         super(Graph_Critic_Model, self).__init__()
-        self.num_agents = N
         self.num_outputs = A
         self.action_min = action_min
         self.action_max = action_max
@@ -150,7 +169,6 @@ class Graph_Critic_Model(nn.Module):
 
         self.to(self.device)
 
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
 
     def forward(self, observation):
         """
@@ -189,8 +207,9 @@ class Graph_Critic_Model(nn.Module):
         X_policy = F.relu(X_policy)
 
         # Mask
-        mask = torch.reshape(RL_indice, (self.num_agents, 1))
-
+        # print("RL_indice:", RL_indice)
+        # mask = torch.reshape(RL_indice, (self.num_outputs, 1))
+        mask = RL_indice
         # Value
         value = self.value(X_policy)
         value = torch.mul(value, mask)
@@ -205,21 +224,21 @@ class NonGraph_Actor_Model(nn.Module):
         2.F is the feature length of each vehicle
         3.A is the number of selectable actions
     """
-    def __init__(self, N, A):
+    def __init__(self, S, A):
         super(NonGraph_Actor_Model, self).__init__()
-        self.num_agents = N
+        self.len_states = S
         self.num_outputs = A
         # self.action_min = action_min
         # self.action_max = action_max
         
         # Encoder
-        self.encoder_1 = nn.Linear(N, 64)
-        self.encoder_2 = nn.Linear(64, 128)
+        self.encoder_1 = nn.Linear(S, 64)
+        self.encoder_2 = nn.Linear(64, 1024)
         
         # Policy network
-        self.policy_1 = nn.Linear(128, 1024)  #800-600 was used before.
+        self.policy_1 = nn.Linear(1024, 1024)  #800-600 was used before.
         self.policy_2 = nn.Linear(1024, 512)  #128-64 is bad
-        self.policy_3 = nn.Linear(512, 128)
+        self.policy_3 = nn.Linear(512, 128)   #64-128-1024-512-128
         
         # Actor network
         self.mu = nn.Linear(128, A)
@@ -273,15 +292,15 @@ class NonGraph_Critic_Model(nn.Module):
         2.F is the feature length of each vehicle
         3.A is the number of selectable actions
     """
-    def __init__(self, N, A):
+    def __init__(self, S, A):
         super(NonGraph_Critic_Model, self).__init__()
-        self.num_agents = N
+        self.len_states = S
         self.num_outputs = A
         # self.action_min = action_min
         # self.action_max = action_max
         
         # State Encoder
-        self.encoder_1 = nn.Linear(N, 64)
+        self.encoder_1 = nn.Linear(S, 64)
         self.encoder_2 = nn.Linear(64, 128)
 
         # Policy network
@@ -314,6 +333,7 @@ class NonGraph_Critic_Model(nn.Module):
         """
         N_encoded = F.relu(self.encoder_1(observation))
         N_encoded = F.relu(self.encoder_2(N_encoded))
+        
         # Policy
         X_policy = self.policy_1(N_encoded)
         X_policy = F.relu(X_policy)
@@ -324,8 +344,12 @@ class NonGraph_Critic_Model(nn.Module):
         X_policy = self.policy_4(X_policy)
         X_policy = F.relu(X_policy)
         
+        #Mask
+        Mask = torch.as_tensor(np.ones((6, 1)), dtype=torch.float32, device=self.device)
+        mask = torch.reshape(Mask, (self.num_outputs, 1))
 
         # Value
         value = self.value(X_policy)
-
+        value = torch.mul(value, mask)
+        
         return value

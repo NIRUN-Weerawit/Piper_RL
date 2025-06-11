@@ -52,6 +52,7 @@ class Gym_env():
         self.server             = args['server'] 
         self.headless           = args['headless']
         self.random_goal        = args['random_goal']
+        self.Enable_Graph       = args['Enable_Graph']
         
         self.env                = None
         self.gym                = None     #self.gym = gymapi.acquire_gym()
@@ -412,7 +413,9 @@ class Gym_env():
             self.update()
             
             self.render()
-            states, state_tensor = self.get_states()
+            # states, state_tensor = self.get_states()
+            state_tensor = self.get_states_graph() 
+            # print("state_tensor shape:", state_tensor.shape)
             # print(f"states: {states}")
             return state_tensor, 0, False
         else:    
@@ -437,8 +440,16 @@ class Gym_env():
         # print("mean=", np.array(diff).mean())
         
         
-        
-        states_np, states_tensor = self.get_states()
+        if self.Enable_Graph:
+            # states_np, states_tensor = self.get_states_graph()
+            states_tensor = self.get_states_graph()
+            # print("states")
+            # print(', '.join(f'{q:.2f}' for q in states_np))
+            # print(f"type = {type(states_tensor)}")
+        else:
+            _, states_tensor = self.get_states()
+            
+        # print("states_tensor shape:", states_tensor.shape)
         # print("states")
         # print(', '.join(f'{q:.2f}' for q in states_np))
         # print(f"type = {type(states_tensor)}")
@@ -454,7 +465,7 @@ class Gym_env():
 
         # compute the reward
         # rl_clipped = clip_actions(rl_actions)   #TODO: Make sure whether clip_actions() function is necessary
-        reward, result = self.compute_reward(states_np, rl_actions)  #TODO: fix this when crash is availalbe fail=crash 
+        reward, result = self.compute_reward(rl_actions)  #TODO: fix this when crash is availalbe fail=crash 
 
         return states_tensor, reward, result  # infos
     
@@ -598,7 +609,57 @@ class Gym_env():
             # print("size:", len(obs))
         return obs, obs_tensor
         # return self.cube_states, self.piper_dof_states, self.piper_body_states
+    
+    def get_states_graph(self):
+        '''return observations of the environment's states
         
+        Return
+        ------
+        obs: list()
+            [goal_position x3, goal_orientation x4, end_effector_position x3, end_effector_orientation x4]
+        '''
+            #TODO: add other states in the environment like velocities, torques, positions of each joint.
+            
+        features = [] 
+        #features = [ [angle, position, velocity, goal_position] * 6]]
+
+        goal_position = self.cube_pose #list(3)    #TODO: change this when the goal_pos refers to the real cube
+        goal_position_normalized            = [(goal_position[0]  + 0.65) / 1.3 ,
+                                               (goal_position[1]  + 0.75) / 1.5 ,
+                                               (goal_position[2]  + 0.65 )/ 1.3 ]
+        
+        joint_angles                        = [0.0] * 6
+        joint_velocities_normalized         = [0.0] * 6
+        
+        joint_angles[:]                     = self.piper_dof_states['pos'][:6]   #list(6) 
+        joint_angles[:]                     = (joint_angles[:] - self.piper_lower_limits[:]) / (self.piper_upper_limits[:] - self.piper_lower_limits[:])
+        
+        joint_positions                     = self.piper_body_states['pose']['p'][:6]
+        
+        joint_positions_normalized          = [ ((joint_positions[i]['x'] + 0.65) / 1.3, (joint_positions[i]['y'] + 0.75) / 1.5, (joint_positions[i]['z'] + 0.65) / 1.3 ) for i in range(6)] 
+        # print("joint_positions_normalized:", joint_positions_normalized)
+        joint_velocities_normalized[:]      = (self.piper_dof_states['vel'][:6] + 3.0) / 6.0
+        
+        for i in range(6):
+            feature = []
+            # feature = [self.piper_dof_states['pos'][i], self.piper_body_states['pose']['p'][i] + self.piper_dof_states['vel'][i] + goal_position]
+            feature.append(joint_angles[i])  # joint angle
+            feature += list(joint_positions_normalized[i])  # joint position
+            # feature.append(joint_positions_normalized[i])  # joint position
+            feature.append(joint_velocities_normalized[i])  # joint velocity
+            feature += (goal_position_normalized)  # goal position
+            # feature = [joint_angles[i] , joint_positions_normalized[i] , joint_velocities_normalized[i] , goal_position_normalized]
+            # print("joint_angles[i]:", joint_angles[i], "joint_positions_normalized[i]:", joint_positions_normalized[i], "joint_velocities_normalized[i]:", joint_velocities_normalized[i])
+            # feature.append(self.piper_dof_states['pos'][i])
+            # feature.append(self.piper_body_states['pose']['p'][i])
+            # feature.append(self.piper_dof_states['vel'][i])
+            # feature.append(goal_position_normalized)
+            # print(f"feature {i}:", feature)
+            features.append(feature)
+        # features = np.array(features, dtype=np.float32)
+        features = torch.tensor(features, dtype=torch.float32, device="cuda:0")
+        
+        return features
         
     #COMPLETE  
     def update(self):
@@ -647,8 +708,10 @@ class Gym_env():
         self.step_physics()
         self.render()
         self.update()
-        
-        _, states_tensor = self.get_states()
+        if self.Enable_Graph:
+            states_tensor = self.get_states_graph()
+        else:
+            _, states_tensor = self.get_states()
         current_EE_pose     = self.piper_body_states['pose']['p'][-3] 
         current_EE_pose     = [current_EE_pose['x'],current_EE_pose['y'],current_EE_pose['z']]
         self.goal_dist_initial = np.linalg.norm(np.array(current_EE_pose) - np.array(self.cube_pose))
@@ -841,7 +904,7 @@ class Gym_env():
         return rl_actions_clipped
 
     #COMPLETE
-    def compute_reward(self, states, rl_actions=None, **kwargs):
+    def compute_reward(self, rl_actions=None, **kwargs):
         """Reward function for the RL agent(s).
 
         MUST BE implemented in new environments.
@@ -872,7 +935,6 @@ class Gym_env():
         if rl_actions is None:
             return 0, False
         
-        state = np.copy(states)
         #TODO: come back here to update when the states is more detailed
         #state = array[(self.cube_states, self.piper_dof_states, self.piper_body_states)]
         
