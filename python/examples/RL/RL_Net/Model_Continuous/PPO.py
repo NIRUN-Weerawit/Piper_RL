@@ -102,7 +102,9 @@ class Graph_Actor_Model(nn.Module):
 
         # GCN
         A_in_Sparse, _ = dense_to_sparse(A_in_Dense)  # 将observation的邻接矩阵转换成稀疏矩阵
-        X_graph = self.GraphConv(X, A_in_Sparse)
+        X_graph = self.GraphConv_1(X, A_in_Sparse)
+        X_graph = F.relu(X_graph)
+        X_graph = self.GraphConv_2(X_graph, A_in_Sparse)
         X_graph = F.relu(X_graph)
         X_graph = self.GraphConv_Dense(X_graph)
         X_graph = F.relu(X_graph)
