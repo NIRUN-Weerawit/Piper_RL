@@ -640,6 +640,11 @@ class Gym_env():
         # print("joint_positions_normalized:", joint_positions_normalized)
         joint_velocities_normalized[:]      = (self.piper_dof_states['vel'][:6] + 3.0) / 6.0
         
+        end_effector_position               = self.piper_body_states['pose']['p'][-1] 
+        end_effector_position_normalized    = [(end_effector_position['x']  + 0.65) / 1.3 ,
+                                               (end_effector_position['y']  + 0.75) / 1.5 ,
+                                               (end_effector_position['z']  + 0.65 )/ 1.3 ]
+        
         for i in range(6):
             feature = []
             # feature = [self.piper_dof_states['pos'][i], self.piper_body_states['pose']['p'][i] + self.piper_dof_states['vel'][i] + goal_position]
@@ -648,6 +653,7 @@ class Gym_env():
             # feature.append(joint_positions_normalized[i])  # joint position
             feature.append(joint_velocities_normalized[i])  # joint velocity
             feature += (goal_position_normalized)  # goal position
+            feature += list(end_effector_position_normalized)  # end effector position
             # feature = [joint_angles[i] , joint_positions_normalized[i] , joint_velocities_normalized[i] , goal_position_normalized]
             # print("joint_angles[i]:", joint_angles[i], "joint_positions_normalized[i]:", joint_positions_normalized[i], "joint_velocities_normalized[i]:", joint_velocities_normalized[i])
             # feature.append(self.piper_dof_states['pos'][i])
@@ -656,6 +662,11 @@ class Gym_env():
             # feature.append(goal_position_normalized)
             # print(f"feature {i}:", feature)
             features.append(feature)
+        
+        
+
+            
+            
         # features = np.array(features, dtype=np.float32)
         features = torch.tensor(features, dtype=torch.float32, device="cuda:0")
         

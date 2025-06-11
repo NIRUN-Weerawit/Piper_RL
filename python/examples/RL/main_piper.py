@@ -20,8 +20,8 @@ TRAINING = True
 TESTING = False
 
 # Graph configuration
-# Enable_Graph = True
-Enable_Graph = False
+Enable_Graph = True
+# Enable_Graph = False
 
 DEBUG = True
 # DEBUG = False
@@ -53,18 +53,20 @@ args = dict(sim_device          = "cuda:0",
             debug_interval      = 200,
             dt                  = 0.1,  #time_step duration for executing command   
             warmup              = warmup,
-            server              = True,
+            server              = False,
             random_goal         = True,
             action_scale        = 1.0,
+            Enable_Graph        = Enable_Graph,
             state_size                  = 29,
             action_size                 = 6,
             hidden_size                 = 256,
-            lr_critic                   = 0.0002,
-            lr_actor                    = 0.0001,
+            lr_critic                   = 0.00005,
+            lr_actor                    = 0.00001,
+            n_epochs                    = 5,  # number of epochs for training
             explore_noise               = 0.2,
             noise_clip                  = 0.4,
             gamma                       = 0.99,
-            batch_size                  = 100   ,  # batch_size
+            batch_size                  = 50   ,  # batch_size
             update_interval             = 300,  # model update interval (< actor model) 100
             update_interval_actor       = 2,  # actor model update interval 500
             target_update_interval      = 200,  # target model update interval 5000
