@@ -70,7 +70,7 @@ class Experiment:
 
     def run(self, num_envs, training, testing, Graph, debug_training, debug_testing):
 
-        from GRL_Utils.Train_and_Test_PPO import Training_GRLModels, Testing_GRLModels
+        # from GRL_Utils.Train_and_Test_PPO import Training_GRLModels, Testing_GRLModels
         import torch
         import torch.nn
 
@@ -152,4 +152,5 @@ class Experiment:
             test_episodes = 10
             self.sm.find_latest_session()
             load_dir = self.sm.session_dir
+            # load_dir = '/home/ucluser/isaacgym/python/examples/RL/RL_TrainedModels/PPO_35'
             Testing_GRLModels(GRL_PPO, test_episodes, self.max_episode_len, load_dir, debug_training, self.gym_instance)
