@@ -3,6 +3,9 @@ import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
+from torch_geometric.nn import LayerNorm
+from torch_geometric.nn import GlobalAttention
+from torch_geometric.nn.aggr import AttentionalAggregation
 from torch_geometric.utils import dense_to_sparse
 
 N = 6  # Number of joints/nodes
@@ -46,26 +49,40 @@ class Graph_Actor_Model(nn.Module):
         self.num_outputs = A
         self.action_min = torch.tensor(action_min, dtype=torch.float32)
         self.action_max = torch.tensor(action_max, dtype=torch.float32)
+        hidden_dim      = 1024
         
-
+        #Num of features is 11
+        
         # Encoder
-        self.encoder_1 = nn.Linear(F, 64)
-        self.encoder_2 = nn.Linear(64, 64)
+        self.encoder_1 = nn.Linear(F, 256)
+        self.encoder_2 = nn.Linear(256, 256)
 
         # GNN
-        self.GraphConv_1 = GCNConv(64, 64)
-        self.GraphConv_2 = GCNConv(64, 64)
-        self.GraphConv_Dense = nn.Linear(64, 64)
+        self.GraphConv_1 = GCNConv(256, 256)
+        # self.GraphConv_2 = GCNConv(256, 256)
+        self.layerNorm  = LayerNorm(256)
+        
+        # self.gate_nn = nn.Sequential(nn.Linear(256, 1),  nn.Sigmoid())
+        # self.attn_pool = AttentionalAggregation(self.gate_nn)
+        # self.attn_pool = GlobalAttention(self.gate_nn) #deprecated
+        
+        self.GraphConv_Dense = nn.Linear(256, 256)
 
         # Policy network
-        self.policy_1 = nn.Linear(128, 512)
-        self.policy_2 = nn.Linear(512, 512)
-        self.policy_3 = nn.Linear(512, 128)  
-        self.policy_4 = nn.Linear(128, 32) 
-
+        self.policy_1 = nn.Linear(512, hidden_dim)
+        self.policy_2 = nn.Linear(hidden_dim, hidden_dim)
+        self.policy_3 = nn.Linear(hidden_dim, hidden_dim)  
+        self.policy_4 = nn.Linear(hidden_dim, hidden_dim)  
+        self.policy_5 = nn.Linear(hidden_dim, hidden_dim)  # Added an extra layer for better performance
+        self.policy_6 = nn.Linear(hidden_dim, hidden_dim) 
+        self.policy_7 = nn.Linear(hidden_dim, hidden_dim)
+        self.policy_8 = nn.Linear(hidden_dim, hidden_dim)
+        self.policy_9= nn.Linear(hidden_dim, hidden_dim)
+        self.policy_10 = nn.Linear(hidden_dim, 512)
+        
         # Actor network
-        self.mu = nn.Linear(32, A)
-        self.sigma = nn.Linear(32, A)
+        self.mu = nn.Linear(512, A)
+        self.sigma = nn.Linear(512, A)
 
         # GPU configuration
         if torch.cuda.is_available():
@@ -104,13 +121,20 @@ class Graph_Actor_Model(nn.Module):
         A_in_Sparse, _ = dense_to_sparse(A_in_Dense)  # 将observation的邻接矩阵转换成稀疏矩阵
         X_graph = self.GraphConv_1(X, A_in_Sparse)
         X_graph = F.relu(X_graph)
-        X_graph = self.GraphConv_2(X_graph, A_in_Sparse)
-        X_graph = F.relu(X_graph)
+        X_graph = self.layerNorm(X_graph)
+        # X_graph = self.GraphConv_2(X_graph, A_in_Sparse)
+        # X_graph = F.relu(X_graph)
+        # batch = torch.repeat_interleave(torch.arange(6), 1).to(self.device)
+
+        # X_graph = self.attn_pool(X_graph, batch)
+        
+        
         X_graph = self.GraphConv_Dense(X_graph)
         X_graph = F.relu(X_graph)
-        # print("X shape:", X.shape)
+        
+        
         # print("X_graph shape:", X_graph.shape)
-       
+        # print("X shape:", X.shape)
 
         # Feature concatenation
         F_concat = torch.cat((X_graph, X), dim=1)
@@ -124,7 +148,18 @@ class Graph_Actor_Model(nn.Module):
         X_policy = F.relu(X_policy)
         X_policy = self.policy_4(X_policy)
         X_policy = F.relu(X_policy)
-
+        X_policy = self.policy_5(X_policy)  # Added an extra layer for better performance
+        X_policy = F.relu(X_policy)
+        X_policy = self.policy_6(X_policy)  # Added an extra layer for better performance
+        X_policy = F.relu(X_policy)
+        X_policy = self.policy_7(X_policy)  # Added an extra layer for better performance
+        X_policy = F.relu(X_policy)
+        X_policy = self.policy_8(X_policy)  # Added an extra layer for better performance
+        X_policy = F.relu(X_policy)
+        X_policy = self.policy_9(X_policy)  # Added an extra layer for better performance
+        X_policy = F.relu(X_policy)
+        X_policy = self.policy_10(X_policy)  # Added an extra layer for better performance
+        X_policy = F.relu(X_policy)
         # mu and sigma
         pi_mu = self.mu(X_policy)
         pi_sigma = self.sigma(X_policy)
@@ -153,27 +188,41 @@ class Graph_Critic_Model(nn.Module):
         self.num_outputs = A
         self.action_min = action_min
         self.action_max = action_max
-
+        hidden_dim      = 1024
         # Encoder
-        self.encoder_1 = nn.Linear(F, 64)
-        self.encoder_2 = nn.Linear(64, 64)
+        self.encoder_1 = nn.Linear(F, 256)
+        self.encoder_2 = nn.Linear(256, 256)
 
         # GNN
-        self.GraphConv_1 = GCNConv(64, 64)
-        self.GraphConv_2 = GCNConv(64, 64)
-        self.GraphConv_Dense = nn.Linear(64, 64)
+        self.GraphConv_1 = GCNConv(256, 256)
+        # self.GraphConv_2 = GCNConv(256, 256)
+        
+        self.layerNorm  = LayerNorm(256)
+        
+        self.gate_nn = nn.Sequential(nn.Linear(256, 1),  nn.Sigmoid())
+        self.attn_pool = AttentionalAggregation(self.gate_nn)
+        # self.attn_pool = GlobalAttention(self.gate_nn) #deprecated
+        
+        
+        self.GraphConv_Dense = nn.Linear(256, 256)
 
         # Policy network
-        self.policy_1 = nn.Linear(128, 800)
-        self.policy_2 = nn.Linear(800, 600)
-        self.policy_3 = nn.Linear(600, 400)  
-        self.policy_4 = nn.Linear(400, 200) 
+        self.policy_1 = nn.Linear(256,hidden_dim)
+        self.policy_2 = nn.Linear(hidden_dim,hidden_dim)
+        self.policy_3 = nn.Linear(hidden_dim,hidden_dim)  
+        self.policy_4 = nn.Linear(hidden_dim,hidden_dim) 
+        self.policy_5 = nn.Linear(hidden_dim,hidden_dim)  # Added an extra layer for better performance
+        self.policy_6 = nn.Linear(hidden_dim,hidden_dim)
+        self.policy_7 = nn.Linear(hidden_dim,hidden_dim)
+        self.policy_8 = nn.Linear(hidden_dim,hidden_dim)
+        self.policy_9 = nn.Linear(hidden_dim,hidden_dim)
+        self.policy_10 = nn.Linear(hidden_dim, 512)
         
         """self.policy_1 = nn.Linear(512, 512)
         self.policy_2 = nn.Linear(512, 64)"""
 
         # Critic network
-        self.value = nn.Linear(200, 1)
+        self.value = nn.Linear(512, 1)
 
         # GPU configuration
         if torch.cuda.is_available():
@@ -209,16 +258,26 @@ class Graph_Critic_Model(nn.Module):
         A_in_Sparse, _ = dense_to_sparse(A_in_Dense)
         X_graph = self.GraphConv_1(X, A_in_Sparse)
         X_graph = F.relu(X_graph)
-        X_graph = self.GraphConv_2(X_graph, A_in_Sparse)
-        X_graph = F.relu(X_graph)
+        X_graph = self.layerNorm(X_graph)
+        
+        # X_graph = self.GraphConv_2(X_graph, A_in_Sparse)
+        # X_graph = F.relu(X_graph)
+        
+        # batch = torch.repeat_interleave(torch.arange(6), 1).to(self.device)
+
+        X_graph = self.attn_pool(X_graph)
+        
+        
         X_graph = self.GraphConv_Dense(X_graph)
         X_graph = F.relu(X_graph)
 
         # Feature concatenation
-        F_concat = torch.cat((X_graph, X), 1)
+        # print("Xgraph shape", X_graph.shape)
+        # print("X shape", X.shape)
+        # F_concat = torch.cat((X_graph, X), 1)
 
         # Policy
-        X_policy = self.policy_1(F_concat)
+        X_policy = self.policy_1(X_graph)
         X_policy = F.relu(X_policy)
         X_policy = self.policy_2(X_policy)
         X_policy = F.relu(X_policy)
@@ -226,7 +285,19 @@ class Graph_Critic_Model(nn.Module):
         X_policy = F.relu(X_policy)
         X_policy = self.policy_4(X_policy)
         X_policy = F.relu(X_policy)
-
+        X_policy = self.policy_5(X_policy)  # Added an extra layer for better performance
+        X_policy = F.relu(X_policy)
+        X_policy = self.policy_6(X_policy)
+        X_policy = F.relu(X_policy)
+        X_policy = self.policy_7(X_policy)
+        X_policy = F.relu(X_policy)
+        X_policy = self.policy_8(X_policy)
+        X_policy = F.relu(X_policy)
+        X_policy = self.policy_9(X_policy)
+        X_policy = F.relu(X_policy)
+        X_policy = self.policy_10(X_policy)
+        X_policy = F.relu(X_policy)
+        
         # Mask
         # print("RL_indice:", RL_indice)
         # mask = torch.reshape(RL_indice, (self.num_outputs, 1))

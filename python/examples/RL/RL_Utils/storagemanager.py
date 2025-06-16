@@ -44,6 +44,25 @@ class StorageManager:
         print(f"Latest session found: {self.session}")
         # return self.session
 
+    def find_n_session(self, n):
+        if not os.path.exists(self.machine_dir):
+            print(f"Machine directory does not exist: {self.machine_dir}")
+            return None
+        
+        sessions = [d for d in os.listdir(self.machine_dir) if os.path.isdir(os.path.join(self.machine_dir, d)) and d.startswith(self.name)]
+        if not sessions:
+            print(f"No sessions found for {self.name} in {self.machine_dir}")
+            return None
+        
+        if n >= len(sessions):
+            print(f"Requested session {n} exceeds available sessions.")
+            return None
+        # print(f"Available sessions: {sessions}")
+        self.session = 'PPO_' + str(n)
+        self.session_dir = os.path.join(self.machine_dir, self.session)
+        print(f"Session {n} found: {self.session}")
+        # return self.session
+    
     def delete_file(path):
         if os.path.exists(path):
             os.remove(path)

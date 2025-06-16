@@ -61,7 +61,9 @@ def Training_GRLModels(GRL_model, n_episodes, max_episode_len, save_dir, debug, 
             t_now = gym.get_sim_time(sim)
             
             action, prob, val = GRL_model.choose_action(obs)
+            # if t % 50 == 0: print("obs",obs)
             detached_action = action.detach().cpu().data.numpy().astype(np.float32)
+            
             obs_next, reward, success = gym_instance.step(detached_action)
             
             if t % gym_instance.debug_interval == 0: 
@@ -101,9 +103,11 @@ def Training_GRLModels(GRL_model, n_episodes, max_episode_len, save_dir, debug, 
         # Average_Q.append(avg_q)
         
         writer.add_scalar('Reward/episode', R, i)
-        writer.add_scalar('Loss_Actor/episode', loss_actor, i)
-        writer.add_scalar('Loss_Critic/episode', loss_critic, i)
-        writer.add_scalar('success/episode', success_count, i)
+        # writer.add_scalar('Loss_Actor/episode', loss_actor, i)
+        writer.add_scalars('Losses per episode', {'Loss_actor': loss_actor,
+                                                  'Loss_critic': loss_critic}, i)
+        # writer.add_scalar('Loss_Critic/episode', loss_critic, i)
+        
     
         if i % gym_instance.debug_interval == 0:
             print('Training Episode:', i, 'Reward:', R, '  Loss_actor:', loss_actor, '  Loss_critic:', loss_critic, '----------#')
@@ -114,8 +118,16 @@ def Training_GRLModels(GRL_model, n_episodes, max_episode_len, save_dir, debug, 
             fail    += 1
             print('#-----FAILED! EPISODE:', i,  'Finished,  Reward:', R, '  Loss_actor:', loss_actor, '  Loss_critic:', loss_critic, '----------#') 
         
-        print(f"#----STAT: fail= {fail}, success= {success_count}, total= {fail+success_count}")
+        if i != 0:
+            writer.add_scalar('success rate/episode', success_count / i , i)
+            print(f"#----STAT: success= {success_count}, total= {fail+success_count}, success_rate = {success_count/i}")
+        else:
+            writer.add_scalar('success rate/episode', 0 , i)
+            print(f"#----STAT: success= {success_count}, total= {fail+success_count}")
         
+        writer.add_scalar('success/episode', success_count, i)
+            
+            
         if i % 100 == 0 and i != 0:
             # Save model
             GRL_model.save_model(save_dir)
@@ -128,7 +140,7 @@ def Training_GRLModels(GRL_model, n_episodes, max_episode_len, save_dir, debug, 
         i += 1
 
     gym_instance.stop_simulation()
-    print('Training Finished.')
+    print('Training Finished.' )
     
     
 def Testing_GRLModels(GRL_model, n_episodes, max_episode_len, load_dir, debug,  gym_instance):
@@ -147,11 +159,12 @@ def Testing_GRLModels(GRL_model, n_episodes, max_episode_len, load_dir, debug,  
     # Here is how the model is tested
     Rewards = [] # Initialize the reward matrix for data storage
     
-    writer = SummaryWriter('logs_test')
+    writer = SummaryWriter(os.path.join(load_dir,'logs_train'))
     gym = gym_instance.gym
     sim = gym_instance.sim
     dt  = gym_instance.dt
     GRL_model.load_model(load_dir)
+    gym_instance.step_physics() 
 
     print("#-------------------------------------#")
     print("#-----------Testing Begins------------#")
@@ -161,9 +174,10 @@ def Testing_GRLModels(GRL_model, n_episodes, max_episode_len, load_dir, debug,  
     t               = 0
     R               = 0
     i               = 0
-    success_count = 0
-    fail    = 0
-    total_steps = 0
+    success_count   = 0
+    fail            = 0
+    total_steps     = 0
+    
     while i <= n_episodes :
 
         obs = gym_instance.init_episode()
@@ -190,7 +204,7 @@ def Testing_GRLModels(GRL_model, n_episodes, max_episode_len, load_dir, debug,  
                     print("action = ", ',    '.join(f'{q:.2f}' for q in detached_action))
             if t >= max_episode_len:
                     done        = True 
-                    reward      -= 50
+                    # reward      -= 50
                     # print("fail!!")
                     
             R += reward
@@ -209,13 +223,16 @@ def Testing_GRLModels(GRL_model, n_episodes, max_episode_len, load_dir, debug,  
         
         if success:
                 success_count += 1
-                print('#-----SUCCESS! EPISODE:', i, 'Finished,  Reward:', R, '----------#') 
+                print('#------------------SUCCESS! -------------------#')
+                print('#----------EPISODE:', i, 'Finished,  Reward:', R, '----------#') 
         else:
                 fail    += 1
-                print('#-----FAILED! EPISODE:', i,  'Finished,  Reward:', R, '----------#') 
+                print('#------------------FAILED! --------------------#')
+                print('#----------EPISODE:', i,  'Finished,  Reward:', R, '----------#') 
             
-        print(f"#-------STAT: FAILURE= {fail}, SUCCESS= {success_count}, TOTAL= {fail+success_count} --------#")
+        print(f"#-------STAT: SUCCESS= {success_count}, TOTAL= {fail+success_count} --------#")
         
+        i+=1
         
     print('Evaluation Finished')
 

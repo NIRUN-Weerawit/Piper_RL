@@ -102,6 +102,11 @@ class Gym_env():
         
         # self.sims_per_step = 100\
     
+    def set_seed(self, seed):
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        np.random.seed(seed)
+    
     def parse_device_str(self, device_str):
         # defaults
         device = 'cpu'
@@ -314,6 +319,7 @@ class Gym_env():
         
         
         #create empty gym environment  
+        self.set_seed(11)
         self.create_gym_env()
         piper_asset = self.load_piper()
         cube_asset  = self.load_cube()
@@ -480,27 +486,34 @@ class Gym_env():
             
     def random_new_goal(self, randomness=True):
         
-        if randomness:
-            max_radius = 0.4
-            min_radius = 0.25
-            # Random point in spherical coordinates
-            r = np.random.uniform(min_radius, max_radius)  # Random radius [0, 0.8]
-            theta = np.random.uniform(0, 2 * np.pi )  # Random azimuthal angle [0, 2pi]
-            phi = np.random.uniform(0, 2 * np.pi )  # Random polar angle [0, pi/2] (upper hemisphere)
-            end_effector_position  = self.piper_body_states['pose']['p'][-3] 
-            print("end_effector_position", end_effector_position)
+        def generate_goal():
+            if randomness:
+                max_radius = 0.7
+                min_radius = 0.1
+                # Random point in spherical coordinates
+                r = np.random.uniform(min_radius, max_radius)  # Random radius [0, 0.8]
+                theta = np.random.uniform(0, 2 * np.pi )  # Random azimuthal angle [0, 2pi]
+                phi = np.random.uniform(0, 2 * np.pi )  # Random polar angle [0, pi/2] (upper hemisphere)
+                end_effector_position  = self.piper_body_states['pose']['p'][-6] 
+                # print("end_effector_position", end_effector_position)
 
-            # Convert spherical to Cartesian coordinates
-            x = r * np.sin(phi) * np.cos(theta) + end_effector_position['x']
-            y = r * np.cos(phi)                 + end_effector_position['y']
-            z = r * np.sin(phi) * np.sin(theta) + end_effector_position['z'] 
-            # z = np.clip(z, 0.1, 0.8)
-        else:
-            # set_length = len(self.goal_set)
-            goal_pose = random.choice(self.goal_set)
-            x,y,z   = goal_pose[0],goal_pose[1],goal_pose[2]
-  
-        self.cube_pose = [x,y,z]    
+                # Convert spherical to Cartesian coordinates
+                x = r * np.sin(phi) * np.cos(theta) + end_effector_position['x']
+                y = r * np.cos(phi)                 + end_effector_position['y']
+                z = r * np.sin(phi) * np.sin(theta) + end_effector_position['z'] 
+                # z = np.clip(z, 0.1, 0.8)
+            else:
+                # set_length = len(self.goal_set)
+                goal_pose = random.choice(self.goal_set)
+                x,y,z   = goal_pose[0],goal_pose[1],goal_pose[2]
+            return x, y, z
+        while True:
+            # Generate a new goal position
+            x, y, z = generate_goal()
+            # Check if the new goal is within the bounds
+            if -0.65 <= x <= 0.65 and 0.1 <= y <= 0.7 and -0.65 <= z <= 0.65:
+                break
+        self.cube_pose = [x, y, z]  # Update the cube pose with the new goal position
         # Random orientation as a normalized quaternion
         rand_quat = np.random.randn(4)
         rand_quat /= np.linalg.norm(rand_quat)
@@ -543,28 +556,29 @@ class Gym_env():
                 
         
         joint_velocities_normalized[:]      = (self.piper_dof_states['vel'][:6] + 3.0) / 6.0  #list(6) 
-        # print("(joint vel) =", joint_velocities)
-        # print(f"joint_angles (len={len(joint_angles)}): {joint_angles[0]}, joint_vel (len={len(joint_velocities)}) : {joint_velocities[0]}")
+        
+        """print("(joint vel) =", joint_velocities)
+        print(f"joint_angles (len={len(joint_angles)}): {joint_angles[0]}, joint_vel (len={len(joint_velocities)}) : {joint_velocities[0]}")
     
         
-        # print(f"EE_position: {end_effector_position}")
+        print(f"EE_position: {end_effector_position}")
         
         
-        # print("size EE_pose", len(ee_p_dicts))
+        print("size EE_pose", len(ee_p_dicts))
         
-        # print(f"body length: {len(self.piper_body_states['pose']['p'])}")
-        # print("EE_pos:", ee_p_dicts[-1])
-        # ee_position_x = [p['x'] for p in ee_p_dicts]
-        # ee_position_y = [p['y'] for p in ee_p_dicts]
-        # ee_position_z = [p['z'] for p in ee_p_dicts]
-        # end_effector_position = ee_position_x + ee_position_y + ee_position_z
+        print(f"body length: {len(self.piper_body_states['pose']['p'])}")
+        print("EE_pos:", ee_p_dicts[-1])
+        ee_position_x = [p['x'] for p in ee_p_dicts]
+        ee_position_y = [p['y'] for p in ee_p_dicts]
+        ee_position_z = [p['z'] for p in ee_p_dicts]
+        end_effector_position = ee_position_x + ee_position_y + ee_position_z"""
         
         # print("EE_position_bf", end_effect
-        end_effector_position               = self.piper_body_states['pose']['p'][-3] 
+        end_effector_position               = self.piper_body_states['pose']['p'][-1] 
         end_effector_position_normalized    = [(end_effector_position['x']  + 0.65) / 1.3 ,
                                                (end_effector_position['y']  + 0.75) / 1.5 ,
                                                (end_effector_position['z']  + 0.65 )/ 1.3 ]
-        end_effector_velocity               = (self.piper_body_states['vel']['linear'][-3])
+        end_effector_velocity               = (self.piper_body_states['vel']['linear'][-1])
         end_effector_velocity               = [end_effector_velocity['x'],
                                                end_effector_velocity['y'],
                                                end_effector_velocity['z']]
@@ -573,28 +587,28 @@ class Gym_env():
         # print("(ee vel normalizeds  ) =", end_effector_velocity_normalized)
         
         velocity_target =  [(self.piper_velocity_target[i] + 3.0 )/ 6.0 for i in range(len(self.piper_velocity_target))]
-        # print("velo_target=", velocity_target)
-        # print("len=", len(velocity_target))
-        # end_effector_position = [list(pos) for pos in end_effector_position] 
-        # print("EE_position_af", end_effector_position)
-        # print("EE_vel=", end_effector_velocity)
-        # end_effector_orientation    = self.piper_body_states['pose']['r'] #dict
+        """print("velo_target=", velocity_target)
+        print("len=", len(velocity_target))
+        end_effector_position = [list(pos) for pos in end_effector_position] 
+        print("EE_position_af", end_effector_position)
+        print("EE_vel=", end_effector_velocity)
+        end_effector_orientation    = self.piper_body_states['pose']['r'] #dict
         
-        # print("size EE_rot", len(ee_r_dicts))
+        print("size EE_rot", len(ee_r_dicts))
         
-        # end_effector_orientation = self.piper_body_states['pose']['r'][-3]      # list of 9 dicts
-        # end_effector_orientation    = [end_effector_orientation['x'],
-                                    #    end_effector_orientation['y'],
-                                    #    end_effector_orientation['z'],
-                                    #    end_effector_orientation['w']]
-        # end_effector_orientation = [list(rot) for rot in end_effector_orientation]  
-        # print("EE_orientation_af", end_effector_orientation)
+        end_effector_orientation = self.piper_body_states['pose']['r'][-3]      # list of 9 dicts
+        end_effector_orientation    = [end_effector_orientation['x'],
+                                       end_effector_orientation['y'],
+                                       end_effector_orientation['z'],
+                                       end_effector_orientation['w']]
+        end_effector_orientation = [list(rot) for rot in end_effector_orientation]  
+        print("EE_orientation_af", end_effector_orientation)
         
-        # obs = [goal_position, goal_orientation, end_effector_position, end_effector_orientation]
-        # obs = np.array(goal_position +  goal_orientation +  end_effector_position + end_effector_orientation)
-        #-------------------3-----------------4---------------------3-----------------------4--------------------------3---------------------6--------------6----------------#
-        # obs = np.array(goal_position + goal_orientation + end_effector_position + end_effector_orientation + end_effector_velocity + joint_angles + joint_velocities, dtype=np.float32)
-        
+        obs = [goal_position, goal_orientation, end_effector_position, end_effector_orientation]
+        obs = np.array(goal_position +  goal_orientation +  end_effector_position + end_effector_orientation)
+        -------------------3-----------------4---------------------3-----------------------4--------------------------3---------------------6--------------6----------------#
+        obs = np.array(goal_position + goal_orientation + end_effector_position + end_effector_orientation + end_effector_velocity + joint_angles + joint_velocities, dtype=np.float32)
+        """
         #--------------------------3----------------------------3-----------------------------3-----------------------------------6----------------------------6----------------#
         
         # print("lens=", len(goal_position_normalized), len(end_effector_position_normalized), len(end_effector_velocity_normalized), len(joint_angles), len(joint_velocities_normalized))
@@ -654,16 +668,22 @@ class Gym_env():
             feature.append(joint_velocities_normalized[i])  # joint velocity
             feature += (goal_position_normalized)  # goal position
             feature += list(end_effector_position_normalized)  # end effector position
-            # feature = [joint_angles[i] , joint_positions_normalized[i] , joint_velocities_normalized[i] , goal_position_normalized]
-            # print("joint_angles[i]:", joint_angles[i], "joint_positions_normalized[i]:", joint_positions_normalized[i], "joint_velocities_normalized[i]:", joint_velocities_normalized[i])
-            # feature.append(self.piper_dof_states['pos'][i])
-            # feature.append(self.piper_body_states['pose']['p'][i])
-            # feature.append(self.piper_dof_states['vel'][i])
-            # feature.append(goal_position_normalized)
-            # print(f"feature {i}:", feature)
+            """feature = [joint_angles[i] , joint_positions_normalized[i] , joint_velocities_normalized[i] , goal_position_normalized]
+            print("joint_angles[i]:", joint_angles[i], "joint_positions_normalized[i]:", joint_positions_normalized[i], "joint_velocities_normalized[i]:", joint_velocities_normalized[i])
+            feature.append(self.piper_dof_states['pos'][i])
+            feature.append(self.piper_body_states['pose']['p'][i])
+            feature.append(self.piper_dof_states['vel'][i])
+            feature.append(goal_position_normalized)
+            print(f"feature {i}:", feature)"""
             features.append(feature)
         
-        
+        """if self.time_ep % 50 == 0:
+            print("joints angles: ", joint_angles)
+            print("joint_positions_normalized: ", joint_positions_normalized)
+            print("joint_velocities_normalized: ", joint_velocities_normalized)
+            print("goal_position_normalized: ", goal_position_normalized)
+            print("goal_position: ", goal_position)
+            print("end_effector_position: ", end_effector_position)"""
 
             
             
@@ -723,7 +743,7 @@ class Gym_env():
             states_tensor = self.get_states_graph()
         else:
             _, states_tensor = self.get_states()
-        current_EE_pose     = self.piper_body_states['pose']['p'][-3] 
+        current_EE_pose     = self.piper_body_states['pose']['p'][-1] 
         current_EE_pose     = [current_EE_pose['x'],current_EE_pose['y'],current_EE_pose['z']]
         self.goal_dist_initial = np.linalg.norm(np.array(current_EE_pose) - np.array(self.cube_pose))
         
@@ -986,7 +1006,7 @@ class Gym_env():
         # dist_reward = 1.0 / (1.0 + (2 * dist) ** 2)
         dist = dist.detach().cpu().item()
         # dist_reward = (2 * self.goal_dist_initial) / (self.goal_dist_initial + dist) - 1
-        if dist < 0.15:
+        if dist < 0.1:
             dist_reward = 1.0
             success = True
         else:
@@ -1014,7 +1034,7 @@ class Gym_env():
         #                                       current_EE_rot['z'],
         #                                       current_EE_rot['w']])
         
-        sum_velocity_targets   =  np.abs(np.array(self.piper_velocity_target)).sum()
+        '''sum_velocity_targets   =  np.abs(np.array(self.piper_velocity_target)).sum()'''
         
         
             
@@ -1038,17 +1058,25 @@ class Gym_env():
         
         # rot_reward = rot_reward.detach().cpu().item()
         
-        if sum_velocity_targets > 12:
+        '''if sum_velocity_targets > 12:
             # print("sum_velocity_targets", sum_velocity_targets)
             vel_reward =   - 1 * (sum_velocity_targets - 12)
             # done = True
         else:
-            vel_reward = 0.0
+            vel_reward = 0.0'''
+            
+        vel_mean = np.mean(np.abs(rl_actions))
+        vel_reward = - (vel_mean * 180  / 220 / math.pi) ** 2 
         
-        rewards = self.dist_reward_scale * dist_reward + height_reward * 5 + vel_reward * 0.5   #- math.sqrt(self.time_counter)
         
-
-
+        rewards = self.dist_reward_scale * dist_reward + height_reward * 5 + vel_reward * 1   #- math.sqrt(self.time_counter)
+        
+        """if self.time_ep % 50 == 0:
+            print("dist: ", dist)
+            print("dist_reward: ", dist_reward)
+            print("vel_mean: ", vel_mean)
+            print("vel_rewward:", vel_reward)
+"""
             # print("NOT DONE DIST = ", dist.item())            
         if self.debug and self.time_counter % self.debug_interval == 0 or success:
             print(f"step: {self.time_counter}       dist= {dist:.3f}")
