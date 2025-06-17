@@ -49,27 +49,27 @@ class Graph_Actor_Model(nn.Module):
         self.num_outputs = A
         self.action_min = torch.tensor(action_min, dtype=torch.float32)
         self.action_max = torch.tensor(action_max, dtype=torch.float32)
-        hidden_dim      = 1024
+        hidden_dim      = 512
         
         #Num of features is 11
         
         # Encoder
-        self.encoder_1 = nn.Linear(F, 256)
-        self.encoder_2 = nn.Linear(256, 256)
+        self.encoder_1 = nn.Linear(F,                   int(hidden_dim / 4))
+        self.encoder_2 = nn.Linear(int(hidden_dim / 4), int(hidden_dim / 4))
 
         # GNN
-        self.GraphConv_1 = GCNConv(256, 256)
+        self.GraphConv_1 = GCNConv(int(hidden_dim / 4), int(hidden_dim / 4))
         # self.GraphConv_2 = GCNConv(256, 256)
-        self.layerNorm  = LayerNorm(256)
+        self.layerNorm  = LayerNorm(int(hidden_dim / 4),int(hidden_dim / 4))
         
         # self.gate_nn = nn.Sequential(nn.Linear(256, 1),  nn.Sigmoid())
         # self.attn_pool = AttentionalAggregation(self.gate_nn)
         # self.attn_pool = GlobalAttention(self.gate_nn) #deprecated
         
-        self.GraphConv_Dense = nn.Linear(256, 256)
+        self.GraphConv_Dense = nn.Linear(int(hidden_dim / 4), int(hidden_dim / 4))
 
         # Policy network
-        self.policy_1 = nn.Linear(512, hidden_dim)
+        self.policy_1 = nn.Linear(int(hidden_dim / 2), hidden_dim)
         self.policy_2 = nn.Linear(hidden_dim, hidden_dim)
         self.policy_3 = nn.Linear(hidden_dim, hidden_dim)  
         self.policy_4 = nn.Linear(hidden_dim, hidden_dim)  
@@ -114,8 +114,9 @@ class Graph_Actor_Model(nn.Module):
         # Encoder
         X = self.encoder_1(X_in)
         X = F.relu(X)
-        X = self.encoder_2(X)
-        X = F.relu(X)
+        
+        # X = self.encoder_2(X)
+        # X = F.relu(X)
 
         # GCN
         A_in_Sparse, _ = dense_to_sparse(A_in_Dense)  # 将observation的邻接矩阵转换成稀疏矩阵
@@ -146,7 +147,7 @@ class Graph_Actor_Model(nn.Module):
         X_policy = F.relu(X_policy)
         X_policy = self.policy_3(X_policy)
         X_policy = F.relu(X_policy)
-        X_policy = self.policy_4(X_policy)
+        """X_policy = self.policy_4(X_policy)
         X_policy = F.relu(X_policy)
         X_policy = self.policy_5(X_policy)  # Added an extra layer for better performance
         X_policy = F.relu(X_policy)
@@ -159,14 +160,14 @@ class Graph_Actor_Model(nn.Module):
         X_policy = self.policy_9(X_policy)  # Added an extra layer for better performance
         X_policy = F.relu(X_policy)
         X_policy = self.policy_10(X_policy)  # Added an extra layer for better performance
-        X_policy = F.relu(X_policy)
+        X_policy = F.relu(X_policy)"""
         # mu and sigma
         pi_mu = self.mu(X_policy)
         pi_sigma = self.sigma(X_policy)
 
         # Action and log value
         pi_sigma = torch.exp(pi_sigma)
-        action_probabilities = torch.distributions.Normal(pi_mu, pi_sigma)
+        action_probabilities = torch.distributions.MultivariateNormal(pi_mu, pi_sigma)
         action = action_probabilities.sample()
         log_probs = action_probabilities.log_prob(action)
         # Action limitation
@@ -188,7 +189,7 @@ class Graph_Critic_Model(nn.Module):
         self.num_outputs = A
         self.action_min = action_min
         self.action_max = action_max
-        hidden_dim      = 1024
+        hidden_dim      = 512
         # Encoder
         self.encoder_1 = nn.Linear(F, 256)
         self.encoder_2 = nn.Linear(256, 256)
@@ -251,8 +252,8 @@ class Graph_Critic_Model(nn.Module):
         # Encoder
         X = self.encoder_1(X_in)
         X = F.relu(X)
-        X = self.encoder_2(X)
-        X = F.relu(X)
+        """X = self.encoder_2(X)
+        X = F.relu(X)"""
 
         # GCN
         A_in_Sparse, _ = dense_to_sparse(A_in_Dense)
@@ -281,7 +282,7 @@ class Graph_Critic_Model(nn.Module):
         X_policy = F.relu(X_policy)
         X_policy = self.policy_2(X_policy)
         X_policy = F.relu(X_policy)
-        X_policy = self.policy_3(X_policy)
+        """X_policy = self.policy_3(X_policy)
         X_policy = F.relu(X_policy)
         X_policy = self.policy_4(X_policy)
         X_policy = F.relu(X_policy)
@@ -296,7 +297,7 @@ class Graph_Critic_Model(nn.Module):
         X_policy = self.policy_9(X_policy)
         X_policy = F.relu(X_policy)
         X_policy = self.policy_10(X_policy)
-        X_policy = F.relu(X_policy)
+        X_policy = F.relu(X_policy)"""
         
         # Mask
         # print("RL_indice:", RL_indice)
@@ -316,25 +317,27 @@ class NonGraph_Actor_Model(nn.Module):
         2.F is the feature length of each vehicle
         3.A is the number of selectable actions
     """
-    def __init__(self, S, A):
+    def __init__(self, S, A, action_min, action_max):
         super(NonGraph_Actor_Model, self).__init__()
         self.len_states = S
         self.num_outputs = A
-        # self.action_min = action_min
-        # self.action_max = action_max
-        
+        self.action_min = torch.tensor(action_min, dtype=torch.float32)
+        self.action_max = torch.tensor(action_max, dtype=torch.float32)
+        hidden_layer = 128
         # Encoder
-        self.encoder_1 = nn.Linear(S, 64)
-        self.encoder_2 = nn.Linear(64, 1024)
+        self.encoder_1 = nn.Linear(S, hidden_layer)
+        self.encoder_2 = nn.Linear(hidden_layer, hidden_layer)
         
         # Policy network
-        self.policy_1 = nn.Linear(1024, 1024)  #800-600 was used before.
-        self.policy_2 = nn.Linear(1024, 512)  #128-64 is bad
-        self.policy_3 = nn.Linear(512, 128)   #64-128-1024-512-128
+        self.policy_1 = nn.Linear(hidden_layer, hidden_layer)  #800-600 was used before.
+        self.policy_2 = nn.Linear(hidden_layer, hidden_layer)  #hidden_layer-64 is bad
+        self.policy_3 = nn.Linear(hidden_layer, hidden_layer)   #64-128-1024-512-128
+        self.policy_4 = nn.Linear(hidden_layer, hidden_layer)
+        
         
         # Actor network
-        self.mu = nn.Linear(128, A)
-        self.sigma = nn.Linear(128, A)
+        self.mu = nn.Linear(hidden_layer, A)
+        self.sigma = nn.Linear(hidden_layer, A)
 
         # GPU configuration
         if torch.cuda.is_available():
@@ -344,7 +347,8 @@ class NonGraph_Actor_Model(nn.Module):
             self.device = "cpu"
 
         self.to(self.device)
-
+        self.action_min = self.action_min.to(self.device)
+        self.action_max = self.action_max.to(self.device)
         # self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
 
     def forward(self, observation):
@@ -360,6 +364,8 @@ class NonGraph_Actor_Model(nn.Module):
         X_policy = F.relu(X_policy)
         X_policy = self.policy_3(X_policy)
         X_policy = F.relu(X_policy)
+        X_policy = self.policy_4(X_policy)
+        X_policy = F.relu(X_policy)
 
         # mu and sigma
         pi_mu = self.mu(X_policy)
@@ -367,12 +373,14 @@ class NonGraph_Actor_Model(nn.Module):
 
         # Action and log value
         pi_sigma = torch.exp(pi_sigma)
+        # action_probabilities = torch.distributions.MultivariateNormal(pi_mu, pi_sigma)
         action_probabilities = torch.distributions.Normal(pi_mu, pi_sigma)
         action = action_probabilities.sample()
         log_probs = action_probabilities.log_prob(action).sum()
         
         # Action limitation
-        # action = torch.clamp(action, min=self.action_min, max=self.action_max)
+        action = torch.clamp(action, min=self.action_min, max=self.action_max)
+        # action = torch.clamp(action, min=self.action_min.view(-1,1), max=self.action_max.view(-1,1))
 
         return action, log_probs, action_probabilities
 
@@ -390,16 +398,16 @@ class NonGraph_Critic_Model(nn.Module):
         self.num_outputs = A
         # self.action_min = action_min
         # self.action_max = action_max
-        
+        hidden_layer = 128
         # State Encoder
-        self.encoder_1 = nn.Linear(S, 64)
-        self.encoder_2 = nn.Linear(64, 128)
+        self.encoder_1 = nn.Linear(S, hidden_layer)
+        self.encoder_2 = nn.Linear(hidden_layer, hidden_layer)
 
         # Policy network
-        self.policy_1 = nn.Linear(128, 512)  #800-600-400 was used before and it was good.
-        self.policy_2 = nn.Linear(512, 1024) #256-512-512-256
-        self.policy_3 = nn.Linear(1024, 512) #128-256-128-64 is bad
-        self.policy_4 = nn.Linear(512, 64)
+        self.policy_1 = nn.Linear(hidden_layer, hidden_layer)  #800-600-400 was used before and it was good.
+        self.policy_2 = nn.Linear(hidden_layer, hidden_layer) #256-512-512-256
+        self.policy_3 = nn.Linear(hidden_layer, hidden_layer) #128-256-128-64 is bad
+        self.policy_4 = nn.Linear(hidden_layer, 64)
 
         # Critic network
         self.value = nn.Linear(64, 1)
@@ -437,7 +445,7 @@ class NonGraph_Critic_Model(nn.Module):
         X_policy = F.relu(X_policy)
         
         #Mask
-        Mask = torch.as_tensor(np.ones((6, 1)), dtype=torch.float32, device=self.device)
+        Mask = torch.as_tensor(np.ones((self.num_outputs, 1)), dtype=torch.float32, device=self.device)
         mask = torch.reshape(Mask, (self.num_outputs, 1))
 
         # Value

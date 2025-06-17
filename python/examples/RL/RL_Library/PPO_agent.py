@@ -68,12 +68,12 @@ class PPOMemory(object):
         indices = torch.randperm(n_states)
 
         # Apply permutation to shuffle data
-        states = states[indices]
+        states  = states[indices]
         actions = actions[indices]
-        probs = probs[indices]
-        vals = vals[indices]
+        probs   = probs[indices]
+        vals    = vals[indices]
         rewards = rewards[indices]
-        dones = dones[indices]
+        dones   = dones[indices]
 
         # Create batches
         batch_start = torch.arange(0, n_states, self.batch_size)
@@ -180,6 +180,7 @@ class PPO(object):
         # Record loss
         self.loss_record_actor = collections.deque(maxlen=100)
         self.loss_record_critic = collections.deque(maxlen=100)
+        self.loss_record_total_loss = collections.deque(maxlen=100)
 
     def store_transition(self, state, action, probs, vals, reward, done):
         """
@@ -207,8 +208,8 @@ class PPO(object):
           observation: the environment observation of the smart body
         """
         # print("observation shape:", observation.shape)
-        action, probs, _ = self.actor_model(observation)
-        value = self.critic_model(observation)
+        action, probs, _    = self.actor_model(observation)
+        value               = self.critic_model(observation)
 
         action = torch.squeeze(action)
         probs = torch.squeeze(probs)
@@ -227,7 +228,9 @@ class PPO(object):
         if self.time_step % self.schedule_update_interval == 0:
             self.actor_optimizer_scheduler.step()
             self.critic_optimizer_scheduler.step()
-
+            print("actor_lr =", self.actor_optimizer_scheduler.get_lr())
+            print("critic_lr =", self.critic_optimizer_scheduler.get_lr())
+            
         for _ in range(self.n_epochs):
             state_arr, action_arr, old_prob_arr, vals_arr, \
             reward_arr, dones_arr, batches = \
@@ -240,6 +243,10 @@ class PPO(object):
             advantage = torch.zeros(len(reward_arr), len(action_arr[1])).to(self.device)
             # advantage = torch.zeros(len(reward_arr)).to(self.device)
             # print("advantage shape:", advantage.shape)
+            
+            #Normalize the rewards
+            reward_arr = (reward_arr - reward_arr.mean()) / (reward_arr.std() + 1e-7)
+            
             for t in range(len(reward_arr) - 1):
                 discount = 1
                 a_t = 0
@@ -248,10 +255,13 @@ class PPO(object):
                                        (1 - int(dones_arr[k])) - values[k])
                     discount *= self.gamma * self.GAE_lambda
                 # advantage[t] = a_t
+                
                 advantage[t, :] = a_t
             # print("advantage shape:", advantage.shape)
             # advantage = torch.stack(advantage)
-
+            
+            #Normalize Advantages for Actor update
+            advantage_norm = (advantage - advantage.mean()) / (advantage.std() + 1e-8)
             # values
             # values = torch.stack(values)
 
@@ -265,26 +275,26 @@ class PPO(object):
                 # Initialize the loss matrix
                 actor_loss_matrix = []
                 critic_loss_matrix = []
-                
+                entropy_matrix = []
                 for i in batch:
                     old_probs = old_prob_arr[i].detach()
                     actions = action_arr[i].detach()
 
                     _, _, dist = self.actor_model(state_arr[i])
-
+                    entropy_matrix.append(dist.entropy())
                     new_probs = dist.log_prob(actions)
                     prob_ratio = new_probs.exp() / old_probs.exp()
-                    weighted_probs = advantage[i].detach() * prob_ratio  # PPO1
+                    weighted_probs = advantage_norm[i].detach() * prob_ratio  # PPO1
                     # ------PPO2------#
                     weighted_clipped_probs = torch.clamp(prob_ratio, 1 - self.policy_clip,
-                                                     1 + self.policy_clip) * advantage[i].detach()
+                                                     1 + self.policy_clip) * advantage_norm[i].detach()
                     # ----------------#
                     actor_loss = -torch.min(weighted_probs, weighted_clipped_probs).mean()
 
                     actor_loss_matrix.append(actor_loss)
 
                 actor_loss_matrix = torch.stack(actor_loss_matrix)
-                
+                entropy_matrix    = torch.stack(entropy_matrix)
                 """old_probs = old_prob_arr.detach()
                 actions = action_arr.detach()
                 print("state_arr shape:", state_arr.shape)
@@ -305,11 +315,15 @@ class PPO(object):
                 # actor_loss_matrix.append(actor_loss)
 
                 # actor_loss_matrix = torch.stack(actor_loss_matrix)
-                actor_loss_mean = torch.mean(actor_loss_matrix)
+                
 
-                self.actor_optimizer.zero_grad()
+                """self.actor_optimizer.zero_grad()
+                actor_loss_mean = torch.mean(actor_loss_matrix)
                 actor_loss_mean.backward()
-                self.actor_optimizer.step()
+                
+                torch.nn.utils.clip_grad_norm_(self.actor_model.parameters(), 0.5)
+                
+                self.actor_optimizer.step()"""
 
                 """# Calculate critic_loss and update the critic network
                 critic_value = self.critic_model(state_arr)
@@ -346,20 +360,33 @@ class PPO(object):
                 
                 critic_loss_matrix = torch.stack(critic_loss_matrix)
     
-                critic_loss_mean = 0.5 * torch.mean(critic_loss)
+                
 
-
-
+                
+                self.actor_optimizer.zero_grad()
                 self.critic_optimizer.zero_grad()
-                critic_loss_mean.backward()
+                
+                # actor_loss_mean = torch.mean(actor_loss_matrix)
+                # critic_loss_mean = 0.5 * torch.mean(critic_loss)
+                # print(actor_loss_matrix.shape, critic_loss_matrix.shape, entropy_matrix.shape)
+                # print(len(actor_loss_matrix), len(critic_loss_matrix), len(entropy_matrix))
+                total_loss = actor_loss_matrix + 0.5 * critic_loss_matrix - 0.01 * entropy_matrix.sum(1)
+                
+                # actor_loss_mean.backward()
+                # critic_loss_mean.backward()
+                total_loss.mean().backward()
+                
+                torch.nn.utils.clip_grad_norm_(self.actor_model.parameters(), 0.5)
+                torch.nn.utils.clip_grad_norm_(self.critic_model.parameters(), 1.0)
+                
+                self.actor_optimizer.step()
                 self.critic_optimizer.step()
                 
-                
-
-                
                 # self.loss_record.append(float((actor_loss_mean + critic_loss_mean).detach().cpu().numpy()))
-                self.loss_record_critic.append(float((critic_loss_mean).detach().cpu().numpy()))
-                self.loss_record_actor.append(float((actor_loss_mean).detach().cpu().numpy()))
+                # self.loss_record_critic.append(float((critic_loss_mean).detach().cpu().numpy()))
+                # self.loss_record_actor.append(float((actor_loss_mean).detach().cpu().numpy()))
+                self.loss_record_total_loss.append(float((total_loss.mean()).detach().cpu().numpy()))
+                
         
         self.memory.clear_memory()
 
@@ -370,8 +397,14 @@ class PPO(object):
         """
         # loss_statistics = np.mean(self.loss_record) if self.loss_record else np.nan
         loss_critic = np.mean(self.loss_record_critic) if self.loss_record_critic else np.nan
-        loss_actor = np.mean(self.loss_record_actor) if self.loss_record_actor else np.nan
-        return [loss_actor, loss_critic]
+        # loss_actor = np.mean(self.loss_record_actor) if self.loss_record_actor else np.nan
+        loss_total = np.mean(self.loss_record_total_loss) if self.loss_record_total_loss else np.nan
+        # if loss_actor != np.nan or loss_critic != np.nan:
+            # return [loss_actor, loss_critic]
+        # elif loss_total != np.nan:
+        return loss_total
+            
+        
 
     def save_model(self, save_path):
         """
@@ -390,8 +423,8 @@ class PPO(object):
         """
         load_path_actor = load_path + "/" + self.model_name + "_actor" + ".pt"
         load_path_critic = load_path + "/" + self.model_name + "_critic" + ".pt"
-        self.actor_model = torch.load(load_path_actor)
-        self.critic_model = torch.load(load_path_critic)
+        self.actor_model = torch.load(load_path_actor, weights_only=False)
+        self.critic_model = torch.load(load_path_critic, weights_only=False)
 
 
 

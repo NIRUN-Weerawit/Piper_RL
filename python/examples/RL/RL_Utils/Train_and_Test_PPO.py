@@ -19,10 +19,11 @@ def Training_GRLModels(GRL_model, n_episodes, max_episode_len, save_dir, debug, 
         debug: model parameters related to debugging
     """
     # The following is the model training process
-    Rewards = []  # Initialize the reward matrix for data saving
-    Loss_actor = []  # Initialize the Loss matrix for data storage
-    Loss_critic = []  # Initialize the Loss matrix for data storage
-    Episode_Steps = []  # Initialize the step matrix to hold the step length at task completion for each episode
+    Rewards         = []  # Initialize the reward matrix for data saving
+    Loss_actor      = []  # Initialize the Loss matrix for data storage
+    Loss_critic     = []  # Initialize the Loss matrix for data storage
+    Loss_total      = []
+    Episode_Steps   = []  # Initialize the step matrix to hold the step length at task completion for each episode
     writer = SummaryWriter(os.path.join(save_dir,'logs_train'))
     
     print("#------------------------------------#")
@@ -39,7 +40,7 @@ def Training_GRLModels(GRL_model, n_episodes, max_episode_len, save_dir, debug, 
     R_warmup        = 0
     t               = 0
     R               = 0
-    i               = 0
+    i               = 1
     success_count = 0
     fail    = 0
     total_steps = 0
@@ -61,7 +62,7 @@ def Training_GRLModels(GRL_model, n_episodes, max_episode_len, save_dir, debug, 
             t_now = gym.get_sim_time(sim)
             
             action, prob, val = GRL_model.choose_action(obs)
-            # if t % 50 == 0: print("obs",obs)
+            # if t % 50 == 0: print("obs", len(obs))
             detached_action = action.detach().cpu().data.numpy().astype(np.float32)
             
             obs_next, reward, success = gym_instance.step(detached_action)
@@ -93,30 +94,35 @@ def Training_GRLModels(GRL_model, n_episodes, max_episode_len, save_dir, debug, 
 
         # ------ Records training data ------ #
         # Get the training data
-        loss_actor, loss_critic = GRL_model.get_statistics()
-
+        # loss_actor, loss_critic = GRL_model.get_statistics()
+        loss_total = GRL_model.get_statistics()
+        # print("loss_total", loss_total)
         # Recording training data
         Rewards.append(R)
         Episode_Steps.append(t)
-        Loss_actor.append(loss_actor)
-        Loss_critic.append(loss_critic)
+        # Loss_actor.append(loss_actor)
+        # Loss_critic.append(loss_critic)
+        Loss_total.append(loss_total)
         # Average_Q.append(avg_q)
         
         writer.add_scalar('Reward/episode', R, i)
-        # writer.add_scalar('Loss_Actor/episode', loss_actor, i)
-        writer.add_scalars('Losses per episode', {'Loss_actor': loss_actor,
-                                                  'Loss_critic': loss_critic}, i)
+        writer.add_scalar('Loss_total/episode', loss_total, i)
+        """writer.add_scalars('Losses per episode', {'Loss_actor': loss_actor,
+                                                  'Loss_critic': loss_critic}, i)"""
         # writer.add_scalar('Loss_Critic/episode', loss_critic, i)
         
     
         if i % gym_instance.debug_interval == 0:
-            print('Training Episode:', i, 'Reward:', R, '  Loss_actor:', loss_actor, '  Loss_critic:', loss_critic, '----------#')
+            # print('Training Episode:', i, 'Reward:', R, '  Loss_actor:', loss_actor, '  Loss_critic:', loss_critic, '----------#')
+            print('Training Episode:', i, 'Reward:', R, '  Loss_total: ', loss_total, '----------#')
         if success:
             success_count += 1
-            print('#-----SUCCESS! EPISODE:', i, 'Finished,  Reward:', R, '  Loss_actor:', loss_actor, '  Loss_critic:', loss_critic, '----------#') 
+            # print('#-----SUCCESS! EPISODE:', i, 'Finished,  Reward:', R, '  Loss_actor:', loss_actor, '  Loss_critic:', loss_critic, '----------#') 
+            print('#-----SUCCESS! EPISODE:', i, 'Finished,  Reward:', R, '  Loss_total:', loss_total, '----------#') 
         else:
             fail    += 1
-            print('#-----FAILED! EPISODE:', i,  'Finished,  Reward:', R, '  Loss_actor:', loss_actor, '  Loss_critic:', loss_critic, '----------#') 
+            # print('#-----FAILED! EPISODE:', i,  'Finished,  Reward:', R, '  Loss_actor:', loss_actor, '  Loss_critic:', loss_critic, '----------#') 
+            print('#-----FAILED! EPISODE:', i,  'Finished,  Reward:', R, '  Loss_total:', loss_total, '----------#') 
         
         if i != 0:
             writer.add_scalar('success rate/episode', success_count / i , i)
@@ -134,13 +140,14 @@ def Training_GRLModels(GRL_model, n_episodes, max_episode_len, save_dir, debug, 
             # Save other data
             np.save(save_dir + "/Rewards_" + str(i), Rewards)
             np.save(save_dir + "/Episode_Steps_" + str(i), Episode_Steps)
-            np.save(save_dir + "/Loss_Actor_" +  str(i), Loss_actor)
-            np.save(save_dir + "/Loss_Critic_" +  str(i), Loss_critic)
+            # np.save(save_dir + "/Loss_Actor_" +  str(i), Loss_actor)
+            # np.save(save_dir + "/Loss_Critic_" +  str(i), Loss_critic)
+            np.save(save_dir + "/Loss_Total_" +  str(i), loss_total)
         gym_instance.reset()
         i += 1
 
     gym_instance.stop_simulation()
-    print('Training Finished.' )
+    print('Training Finished. Saved at ', save_dir)
     
     
 def Testing_GRLModels(GRL_model, n_episodes, max_episode_len, load_dir, debug,  gym_instance):

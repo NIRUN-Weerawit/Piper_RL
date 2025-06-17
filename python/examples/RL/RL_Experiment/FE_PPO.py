@@ -1,6 +1,6 @@
 """Contains an experiment class for running simulations."""
 
-from RL_Utils.create_env import Gym_env
+from RL_Utils.create_env_copy import Gym_env
 import datetime
 import logging
 import time
@@ -49,10 +49,12 @@ class Experiment:
         self.action_min             = [-1] * 6
         self.action_max             = [1] * 6
         self.args                   = args
+        self.n                      = args['EP']
 
         # Get the env name and a creator for the environment.
         self.gym_instance = Gym_env(args)
         self.gym_instance.create_piper_env()
+        self.gym_instance.set_seed(11)
         
         # self.gym_instance.dist_reward_scale = args['dist_reward_scale']
         # self.gym_instance.rot_reward_scale = args['rot_reward_scale']
@@ -74,16 +76,17 @@ class Experiment:
         import torch
         import torch.nn
 
-        from RL_Library                import PPO_agent
-        from RL_Utils.Train_and_Test_PPO import Training_GRLModels, Testing_GRLModels
+        from RL_Library                     import PPO_agent
+        from RL_Utils.Train_and_Test_PPO    import Training_GRLModels, Testing_GRLModels
 
         # Initialize GRL model
         N = self.N
         A = self.A
         F = 11 # Number of features in the graph model
-        action_min = [-3.1415, - 3.40339, -3.1415, -3.92699, -3.92699, -3.92699]  # Min. joints' velocities limits
-        action_max = [3.1415, 3.40339, 3.1415, 3.92699, 3.92699, 3.92699] 
-
+        # action_min = [-3.1415, - 3.40339, -3.1415, -3.92699, -3.92699, -3.92699]  # Min. joints' velocities limits
+        # action_max = [3.1415, 3.40339, 3.1415, 3.92699, 3.92699, 3.92699] 
+        action_min = [-3.1415, - 3.40339]  # Min. joints' velocities limits
+        action_max = [3.1415, 3.4033] 
         assert isinstance(Graph, bool)
         if Graph:
             from RL_Net.Model_Continuous.PPO import Graph_Actor_Model, \
@@ -94,7 +97,7 @@ class Experiment:
         else:
             from RL_Net.Model_Continuous.PPO import NonGraph_Actor_Model, \
                 NonGraph_Critic_Model
-            GRL_actor  = NonGraph_Actor_Model(N,  A)
+            GRL_actor  = NonGraph_Actor_Model(N,  A, action_min, action_max)
             GRL_critic = NonGraph_Critic_Model(N, A)
 
         actor_optimizer = torch.optim.Adam(GRL_actor.parameters(), lr=self.lr_actor)
@@ -103,13 +106,13 @@ class Experiment:
         actor_optimizer_scheduler    = torch.optim.lr_scheduler.ExponentialLR(actor_optimizer, gamma=0.9999)
         
         # Discount factor
-        gamma = 0.98
+        gamma = 0.99
         # GAE factor
-        GAE_lambda = 0.95
+        GAE_lambda = 0.98
         # Policy clip factor
         policy_clip = 0.2
         
-        schedule_update_interval = self.batch_size
+        schedule_update_interval = self.update_interval * 2
         
         # Initialize GRL agent
         GRL_PPO = PPO_agent.PPO(
@@ -150,7 +153,8 @@ class Experiment:
         debug_testing = False
         if testing:
             test_episodes = 10
-            self.sm.find_latest_session()
+            # self.sm.find_latest_session()
+            self.sm.find_n_session(self.n)
             load_dir = self.sm.session_dir
-            # load_dir = '/home/ucluser/isaacgym/python/examples/RL/RL_TrainedModels/PPO_35'
+            # load_dir = '/home/ucluser/isaacgym/python/examples/RL/RL_TrainedModels/PPO_27'
             Testing_GRLModels(GRL_PPO, test_episodes, self.max_episode_len, load_dir, debug_training, self.gym_instance)
