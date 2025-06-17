@@ -20,14 +20,17 @@ TRAINING = True
 TESTING = False
 
 # Graph configuration
-Enable_Graph = True
-# Enable_Graph = False
+# Enable_Graph = True
+Enable_Graph = False
 
 DEBUG = True
 # DEBUG = False
 
 RENDER = False
 #RENDER = True
+# 
+headless = True
+# headless = False
 
 # Time horizon
 HORIZON = 800
@@ -49,7 +52,7 @@ args = dict(sim_device          = "cuda:0",
             stiffness           = 1000.0,
             damping             = 200.0,
             debug               = True,
-            headless            = True,
+            headless            = headless,
             debug_interval      = 200,
             dt                  = 0.1,  #time_step duration for executing command   
             warmup              = warmup,
@@ -57,24 +60,25 @@ args = dict(sim_device          = "cuda:0",
             random_goal         = True,
             action_scale        = 1.0,
             Enable_Graph        = Enable_Graph,
-            state_size                  = 29,
-            action_size                 = 6,
+            state_size                  = 22,
+            action_size                 = 2,
             hidden_size                 = 256,
-            lr_critic                   = 0.00005,
+            lr_critic                   = 0.00010,
             lr_actor                    = 0.00001,
-            n_epochs                    = 5,  # number of epochs for training
+            n_epochs                    = 10,  # number of epochs for training
             explore_noise               = 0.2,
             noise_clip                  = 0.4,
             gamma                       = 0.99,
-            batch_size                  = 50   ,  # batch_size
-            update_interval             = 300,  # model update interval (< actor model) 100
+            batch_size                  = 600  ,  # batch_size
+            update_interval             = 1200,  # model update interval (< actor model) 100
             update_interval_actor       = 2,  # actor model update interval 500
             target_update_interval      = 200,  # target model update interval 5000
             soft_update_tau             = 0.001,  # soft update factor
             n_steps                     = 1,
             test_episodes               = 10,
-            n_episodes                  = 2000, 
+            n_episodes                  = 5000, 
             max_episode_len             = 300,
+            EP                          = 58,  
             
 )
 # Boundary of action space
