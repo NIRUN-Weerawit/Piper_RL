@@ -40,10 +40,12 @@ def Training_GRLModels(GRL_model, n_episodes, max_episode_len, save_dir, debug, 
     R_warmup        = 0
     t               = 0
     R               = 0
+    R_1             = 0
     i               = 1
-    success_count = 0
-    fail    = 0
-    total_steps = 0
+    success_count   = 0
+    success_count_1 = 0
+    fail            = 0
+    total_steps     = 0
     
     while i <= n_episodes :
 
@@ -77,6 +79,7 @@ def Training_GRLModels(GRL_model, n_episodes, max_episode_len, save_dir, debug, 
                     # print("fail!!")
                     
             R += reward
+            
             t += 1
             total_steps += 1
             writer.add_scalar('Reward in a episode', reward, t)
@@ -117,6 +120,7 @@ def Training_GRLModels(GRL_model, n_episodes, max_episode_len, save_dir, debug, 
             print('Training Episode:', i, 'Reward:', R, '  Loss_total: ', loss_total, '----------#')
         if success:
             success_count += 1
+            success_count_1 += 1
             # print('#-----SUCCESS! EPISODE:', i, 'Finished,  Reward:', R, '  Loss_actor:', loss_actor, '  Loss_critic:', loss_critic, '----------#') 
             print('#-----SUCCESS! EPISODE:', i, 'Finished,  Reward:', R, '  Loss_total:', loss_total, '----------#') 
         else:
@@ -131,9 +135,16 @@ def Training_GRLModels(GRL_model, n_episodes, max_episode_len, save_dir, debug, 
             writer.add_scalar('success rate/episode', 0 , i)
             print(f"#----STAT: success= {success_count}, total= {fail+success_count}")
         
-        writer.add_scalar('success/episode', success_count, i)
+        R_1 += R
+        if i % 10 == 0:
+            success_avg = success_count_1 / 10
+            R_avg       = R_1 / 10
+            writer.add_scalar('success/episode', success_avg, i)
+            writer.add_scalar('avg_reward/episode', R_avg, i)
+            R_1 = 0
+            success_count_1 = 0
             
-            
+           
         if i % 100 == 0 and i != 0:
             # Save model
             GRL_model.save_model(save_dir)

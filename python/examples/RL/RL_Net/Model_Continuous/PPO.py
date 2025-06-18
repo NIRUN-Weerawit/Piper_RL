@@ -323,7 +323,7 @@ class NonGraph_Actor_Model(nn.Module):
         self.num_outputs = A
         self.action_min = torch.tensor(action_min, dtype=torch.float32)
         self.action_max = torch.tensor(action_max, dtype=torch.float32)
-        hidden_layer = 128
+        hidden_layer = 512
         # Encoder
         self.encoder_1 = nn.Linear(S, hidden_layer)
         self.encoder_2 = nn.Linear(hidden_layer, hidden_layer)
@@ -398,7 +398,7 @@ class NonGraph_Critic_Model(nn.Module):
         self.num_outputs = A
         # self.action_min = action_min
         # self.action_max = action_max
-        hidden_layer = 128
+        hidden_layer = 512
         # State Encoder
         self.encoder_1 = nn.Linear(S, hidden_layer)
         self.encoder_2 = nn.Linear(hidden_layer, hidden_layer)

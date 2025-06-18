@@ -573,7 +573,7 @@ class Gym_env():
         end_effector_position               = [end_effector_position['x'], end_effector_position['y'], end_effector_position['z']]
     
         
-        end_effector_velocity               = (self.piper_body_states['vel']['linear'][2])
+        end_effector_velocity               = (self.piper_body_states['vel']['linear'][3])
         end_effector_velocity               = [end_effector_velocity['x'],
                                                end_effector_velocity['y'],
                                                end_effector_velocity['z']]
@@ -977,11 +977,12 @@ class Gym_env():
             dist_reward = 1.0
             success = True
         else:
-            dist_reward = np.exp(-2 * dist / self.goal_dist_initial) - 1
+            # dist_reward = np.exp(-2 * dist / self.goal_dist_initial) - 1
+            dist_reward = (2 * self.goal_dist_initial) / (self.goal_dist_initial + dist) - 1
             success = False
          
         
-        end_effector_velocity               = (self.piper_body_states['vel']['linear'][2])
+        end_effector_velocity               = (self.piper_body_states['vel']['linear'][3])
         end_effector_velocity               = np.array([end_effector_velocity['x'],
                                                end_effector_velocity['y'],
                                                end_effector_velocity['z']])
@@ -989,7 +990,8 @@ class Gym_env():
         vel_reward = - np.linalg.norm(end_effector_velocity) ** 2
         
         
-        rewards = self.dist_reward_scale * dist_reward + vel_reward * 5   #- math.sqrt(self.time_counter)
+        rewards = self.dist_reward_scale * dist_reward + vel_reward * 10 - 0.01 * self.time_ep   #- math.sqrt(self.time_counter)
+        
         
         """if self.time_ep % 50 == 0:
             print("dist: ", dist)
