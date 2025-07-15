@@ -1,0 +1,36 @@
+Found 53 hdf5 files
+Data from: ['datasets/seed_9']
+- Train on [52] episodes
+- Test on [1] episodes
+Found 53 hdf5 files
+Norm stats from: ['datasets/seed_9']
+Initializing transformations
+Initializing transformations
+Augment images: False, train_num_workers: 2, val_num_workers: 2
+Use VQ: False, None, None
+number of parameters: 44.07M
+KL Weight 10
+validating
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=ResNet18_Weights.IMAGENET1K_V1`. You can also use `weights=ResNet18_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+  0%|                                                                                                                                       | 0/101 [00:00<?, ?it/s]
+Val loss:   129.36650
+
+
+
+
+
+
+
+
+
+
+
+
+
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 101/101 [00:31<00:00,  3.25it/s]
+Training finished:
+Seed 8, val loss 129.366501 at step 0
+Best ckpt, val loss 129.366501 @ step0

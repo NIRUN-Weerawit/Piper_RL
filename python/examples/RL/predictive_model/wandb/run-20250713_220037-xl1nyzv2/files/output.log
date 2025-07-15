@@ -1,0 +1,44 @@
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=ResNet18_Weights.IMAGENET1K_V1`. You can also use `weights=ResNet18_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+  0%|                                                                                                                                       | 0/101 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "imitate_episodes.py", line 876, in <module>
+    main(vars(parser.parse_args()))
+  File "imitate_episodes.py", line 176, in main
+    best_ckpt_info = train_bc(train_dataloader, val_dataloader, config)
+  File "imitate_episodes.py", line 777, in train_bc
+    forward_dict = forward_pass(data, policy)
+  File "imitate_episodes.py", line 739, in forward_pass
+    return policy(qpos_data, image_data, action_data, is_pad) # TODO remove None
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/policy.py", line 220, in __call__
+    a_hat, is_pad_hat, (mu, logvar), probs, binaries = self.model(qpos, image, env_state, actions, is_pad, vq_sample)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/detr/models/detr_vae.py", line 155, in forward
+    latent_input, probs, binaries, mu, logvar = self.encode(qpos, actions, is_pad, vq_sample)
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/detr/models/detr_vae.py", line 104, in encode
+    action_embed = self.encoder_action_proj(actions) # (bs, seq, hidden_dim)  seq = k
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/linear.py", line 117, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (16x8 and 10x256)
+Found 53 hdf5 files
+Data from: ['datasets/seed_9']
+- Train on [52] episodes
+- Test on [1] episodes
+Found 53 hdf5 files
+Norm stats from: ['datasets/seed_9']
+Initializing transformations
+Initializing transformations
+Augment images: False, train_num_workers: 2, val_num_workers: 2
+Use VQ: False, None, None
+number of parameters: 44.07M
+KL Weight 10
+validating

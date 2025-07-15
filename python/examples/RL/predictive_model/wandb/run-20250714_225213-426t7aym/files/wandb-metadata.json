@@ -1,0 +1,41 @@
+{
+    "os": "Linux-6.8.0-60-generic-x86_64-with-glibc2.17",
+    "python": "3.8.20",
+    "heartbeatAt": "2025-07-14T13:52:14.443234",
+    "startedAt": "2025-07-14T13:52:13.561767",
+    "docker": null,
+    "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "gpu_count": 1,
+    "cpu_count": 32,
+    "cuda": null,
+    "args": [
+        "--ckpt_dir",
+        "checkpoint_16_01/",
+        "--task_name",
+        "all",
+        "--seed",
+        "9",
+        "--num_steps",
+        "100000",
+        "--policy_class",
+        "ACT",
+        "--batch_size",
+        "16",
+        "--lr",
+        "1e-4",
+        "--resume_ckpt_path",
+        "checkpoint_16_01/policy_step_0_seed_9.ckpt"
+    ],
+    "state": "running",
+    "program": "imitate_episodes.py",
+    "codePath": "python/examples/RL/predictive_model/imitate_episodes.py",
+    "git": {
+        "remote": "git@github.com:NIRUN-Weerawit/Piper_RL.git",
+        "commit": "22fe72f8f31a2f04c5e04f207a0c0ab1264de0a9"
+    },
+    "email": "nirun.weerawit@gmail.com",
+    "root": "/home/ucluser/isaacgym",
+    "host": "ucluser-galleria",
+    "username": "ucluser",
+    "executable": "/home/ucluser/miniconda3/envs/isaacgym/bin/python3"
+}

@@ -1,0 +1,66 @@
+Found 153 hdf5 files
+Data from: ['/media/ucluser/Extreme SSD/datasets/seed_9']
+- Train on [151] episodes
+- Test on [2] episodes
+Found 153 hdf5 files
+Norm stats from: ['/media/ucluser/Extreme SSD/datasets/seed_9']
+Initializing transformations
+Initializing transformations
+Augment images: False, train_num_workers: 2, val_num_workers: 2
+Use VQ: False, None, None
+number of parameters: 77.32M
+KL Weight 10
+validating
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=ResNet18_Weights.IMAGENET1K_V1`. You can also use `weights=ResNet18_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+  0%|                                                  | 0/100001 [00:00<?, ?it/s]
+Val loss:   79.47558
+  0%|                                                  | 0/100001 [00:23<?, ?it/s]
+Traceback (most recent call last):
+  File "imitate_episodes.py", line 579, in <module>
+    main(vars(parser.parse_args()))
+  File "imitate_episodes.py", line 176, in main
+    best_ckpt_info = train_bc(train_dataloader, val_dataloader, config)
+  File "imitate_episodes.py", line 516, in train_bc
+    forward_dict = forward_pass(data, policy)
+  File "imitate_episodes.py", line 443, in forward_pass
+    return policy(qpos_data, image_data, action_data, is_pad) # TODO remove None
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/policy.py", line 220, in __call__
+    a_hat, is_pad_hat, (mu, logvar), probs, binaries = self.model(qpos, image, env_state, actions, is_pad, vq_sample)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/detr/models/detr_vae.py", line 173, in forward
+    hs = self.transformer(src, None, self.query_embed.weight, pos, latent_input, proprio_input, self.additional_pos_embed.weight)[0]
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/detr/models/transformer.py", line 73, in forward
+    memory = self.encoder(src, src_key_padding_mask=mask, pos=pos_embed)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/detr/models/transformer.py", line 94, in forward
+    output = layer(output, src_mask=mask,
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/detr/models/transformer.py", line 202, in forward
+    return self.forward_post(src, src_mask, src_key_padding_mask, pos)
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/detr/models/transformer.py", line 173, in forward_post
+    src2 = self.self_attn(q, k, value=src, attn_mask=src_mask,
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/activation.py", line 1275, in forward
+    attn_output, attn_output_weights = F.multi_head_attention_forward(
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/functional.py", line 5525, in multi_head_attention_forward
+    attn_output_weights = torch.bmm(q_scaled, k.transpose(-2, -1))
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 354.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 250.94 MiB is free. Including non-PyTorch memory, this process has 7.34 GiB memory in use. Of the allocated memory 7.17 GiB is allocated by PyTorch, and 58.89 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

@@ -1,0 +1,450 @@
+Found 243 hdf5 files
+Data from: ['/media/ucluser/Extreme SSD/datasets_1/seed_10']
+- Train on [240] episodes
+- Test on [3] episodes
+Found 243 hdf5 files
+Norm stats from: ['/media/ucluser/Extreme SSD/datasets_1/seed_10']
+Initializing transformations
+Initializing transformations
+Augment images: False, train_num_workers: 2, val_num_workers: 2
+Use VQ: False, None, None
+number of parameters: 77.32M
+KL Weight 10
+validating
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=ResNet18_Weights.IMAGENET1K_V1`. You can also use `weights=ResNet18_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+  0%|                                                                                                                         | 0/100001 [00:00<?, ?it/s]
+Val loss:   79.42627
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  1%|█▎                                                                                                         | 1262/100001 [12:58<16:44:00,  1.64it/s]
+  1%|█▎                                                                                                         | 1265/100001 [13:00<17:02:09,  1.61it/s]Traceback (most recent call last):
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/utils.py", line 68, in __getitem__
+    image_dict[cam_name] = root[f'/images/{cam_name}'][start_ts]
+  File "h5py/_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py/_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/h5py/_hl/dataset.py", line 758, in __getitem__
+    return self._fast_reader.read(args)
+  File "h5py/_selector.pyx", line 361, in h5py._selector.Reader.read
+  File "h5py/_selector.pyx", line 151, in h5py._selector.Selector.apply_args
+IndexError: Index (111) out of range for (0-110)
+  1%|█▎                                                                                                         | 1269/100001 [13:03<16:55:39,  1.62it/s]
+Traceback (most recent call last):
+  File "imitate_episodes.py", line 579, in <module>
+    main(vars(parser.parse_args()))
+  File "imitate_episodes.py", line 176, in main
+    best_ckpt_info = train_bc(train_dataloader, val_dataloader, config)
+  File "imitate_episodes.py", line 515, in train_bc
+    data = next(train_dataloader)
+  File "imitate_episodes.py", line 540, in repeater
+    for data in loader:
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 630, in __next__
+    data = self._next_data()
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 1344, in _next_data
+    return self._process_data(data)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 1370, in _process_data
+    data.reraise()
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/_utils.py", line 706, in reraise
+    raise exception
+IndexError: Caught IndexError in DataLoader worker process 1.
+Original Traceback (most recent call last):
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/utils/data/_utils/worker.py", line 309, in _worker_loop
+    data = fetcher.fetch(index)  # type: ignore[possibly-undefined]
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/utils/data/_utils/fetch.py", line 52, in fetch
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/utils/data/_utils/fetch.py", line 52, in <listcomp>
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/utils.py", line 138, in __getitem__
+    raise e  # re-raise to stop execution
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/utils.py", line 68, in __getitem__
+    image_dict[cam_name] = root[f'/images/{cam_name}'][start_ts]
+  File "h5py/_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py/_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/h5py/_hl/dataset.py", line 758, in __getitem__
+    return self._fast_reader.read(args)
+  File "h5py/_selector.pyx", line 361, in h5py._selector.Reader.read
+  File "h5py/_selector.pyx", line 151, in h5py._selector.Selector.apply_args
+IndexError: Index (111) out of range for (0-110)

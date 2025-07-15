@@ -1,0 +1,475 @@
+Found 53 hdf5 files
+Data from: ['datasets/seed_9']
+- Train on [52] episodes
+- Test on [1] episodes
+Found 53 hdf5 files
+Norm stats from: ['datasets/seed_9']
+Initializing transformations
+Initializing transformations
+Augment images: False, train_num_workers: 2, val_num_workers: 2
+Use VQ: False, None, None
+number of parameters: 44.07M
+KL Weight 10
+validating
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=ResNet18_Weights.IMAGENET1K_V1`. You can also use `weights=ResNet18_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+  0%|                                                                                                                                      | 0/4001 [00:00<?, ?it/s]
+Val loss:   96.89578
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 12%|███████████████▎                                                                                                            | 496/4001 [02:43<18:31,  3.15it/s]
+
+ 12%|███████████████▍                                                                                                            | 500/4001 [02:44<18:28,  3.16it/s]
+Val loss:   0.43397
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 25%|██████████████████████████████▊                                                                                             | 996/4001 [05:27<15:50,  3.16it/s]
+
+ 25%|██████████████████████████████▋                                                                                            | 1000/4001 [05:28<15:48,  3.16it/s]
+Val loss:   0.23265
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 37%|██████████████████████████████████████████████                                                                             | 1497/4001 [08:11<13:13,  3.16it/s]
+
+ 37%|██████████████████████████████████████████████                                                                             | 1500/4001 [08:12<13:11,  3.16it/s]
+Val loss:   0.16151
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 50%|█████████████████████████████████████████████████████████████▍                                                             | 1998/4001 [10:56<10:34,  3.16it/s]
+
+ 50%|█████████████████████████████████████████████████████████████▍                                                             | 2000/4001 [10:56<10:33,  3.16it/s]
+Val loss:   0.17527
+val_l1: 0.154 val_kl: 0.002 val_loss: 0.175 _timestamp: 1752418553.000 _runtime: 665.000
+Use VQ: False, None, None
+number of parameters: 44.07M
+KL Weight 10
+<All keys matched successfully>
+ 50%|█████████████████████████████████████████████████████████████▍                                                             | 2000/4001 [10:56<10:33,  3.16it/s]imitate_episodes.py:254: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  loading_status = policy.deserialize(torch.load(ckpt_path))
+Not connected to PVD
+Physics Engine: PhysX
+Physics Device: cpu
+GPU Pipeline: disabled
+Loading asset 'urdf/piper_description/urdf/piper_description.urdf' from '/home/ucluser/isaacgym/assets'
+Creating asset 'cube1'
+Loading asset 'urdf/tray/traybox_smaller.urdf' from '/home/ucluser/isaacgym/assets'
+Creating asset 'table'
+Creating 1 environments
+box_ids: [[1, 2, 3]]
+Issacgym piper simulation sytem is completed
+rllout_id : 0
+network warm up done
+Avg fps 15.542313980172041
+#-----------------RESETTING ENV-----------------#
+rllout_id : 1
+network warm up done
+Avg fps 15.674335676262002
+#-----------------RESETTING ENV-----------------#
+rllout_id : 2
+network warm up done
+Avg fps 15.906759016016403
+#-----------------RESETTING ENV-----------------#
+rllout_id : 3
+network warm up done
+Avg fps 15.390627762570038
+#-----------------RESETTING ENV-----------------#
+rllout_id : 4
+network warm up done
+Avg fps 15.563622220861923
+#-----------------RESETTING ENV-----------------#
+rllout_id : 5
+network warm up done
+Avg fps 15.767708735965076
+#-----------------RESETTING ENV-----------------#
+rllout_id : 6
+network warm up done
+Avg fps 15.248424973801017
+#-----------------RESETTING ENV-----------------#
+rllout_id : 7
+network warm up done
+Avg fps 15.77809258529855
+#-----------------RESETTING ENV-----------------#
+rllout_id : 8
+network warm up done
+Avg fps 16.148335647178563
+#-----------------RESETTING ENV-----------------#
+rllout_id : 9
+network warm up done
+ 50%|███████████████████████████████████████████████████████████▌                                                           | 2001/4001 [17:29<65:30:42, 117.92s/it]
+Avg fps 15.859173486896278
+#-----------------RESETTING ENV-----------------#
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 56%|████████████████████████████████████████████████████████████████████▎                                                      | 2222/4001 [18:39<14:56,  1.99it/s]
+Traceback (most recent call last):
+  File "imitate_episodes.py", line 580, in <module>
+    main(vars(parser.parse_args()))
+  File "imitate_episodes.py", line 176, in main
+    best_ckpt_info = train_bc(train_dataloader, val_dataloader, config)
+  File "imitate_episodes.py", line 516, in train_bc
+    forward_dict = forward_pass(data, policy)
+  File "imitate_episodes.py", line 443, in forward_pass
+    return policy(qpos_data, image_data, action_data, is_pad) # TODO remove None
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/policy.py", line 220, in __call__
+    a_hat, is_pad_hat, (mu, logvar), probs, binaries = self.model(qpos, image, env_state, actions, is_pad, vq_sample)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/detr/models/detr_vae.py", line 163, in forward
+    features, pos = self.backbones[cam_id](image[:, cam_id])
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/detr/models/backbone.py", line 110, in forward
+    pos.append(self[1](x).to(x.dtype))
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/detr/models/position_encoding.py", line 36, in forward
+    not_mask = torch.ones_like(x[0, [0]])
+KeyboardInterrupt

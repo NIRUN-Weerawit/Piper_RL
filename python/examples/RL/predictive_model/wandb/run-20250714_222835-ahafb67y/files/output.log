@@ -1,0 +1,136 @@
+Found 153 hdf5 files
+Data from: ['/media/ucluser/Extreme SSD/datasets/seed_9']
+- Train on [151] episodes
+- Test on [2] episodes
+Found 153 hdf5 files
+Norm stats from: ['/media/ucluser/Extreme SSD/datasets/seed_9']
+Initializing transformations
+Initializing transformations
+Augment images: False, train_num_workers: 2, val_num_workers: 2
+Use VQ: False, None, None
+number of parameters: 77.32M
+KL Weight 10
+validating
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=ResNet18_Weights.IMAGENET1K_V1`. You can also use `weights=ResNet18_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+  0%|                                                                                                                         | 0/100001 [00:00<?, ?it/s]
+Val loss:   79.63788
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  0%|▎                                                                                                           | 284/100001 [03:04<17:57:43,  1.54it/s]
+Traceback (most recent call last):
+  File "imitate_episodes.py", line 579, in <module>
+    main(vars(parser.parse_args()))
+  File "imitate_episodes.py", line 176, in main
+    best_ckpt_info = train_bc(train_dataloader, val_dataloader, config)
+  File "imitate_episodes.py", line 516, in train_bc
+    forward_dict = forward_pass(data, policy)
+  File "imitate_episodes.py", line 443, in forward_pass
+    return policy(qpos_data, image_data, action_data, is_pad) # TODO remove None
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/policy.py", line 220, in __call__
+    a_hat, is_pad_hat, (mu, logvar), probs, binaries = self.model(qpos, image, env_state, actions, is_pad, vq_sample)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/detr/models/detr_vae.py", line 163, in forward
+    features, pos = self.backbones[cam_id](image[:, cam_id])
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/detr/models/backbone.py", line 110, in forward
+    pos.append(self[1](x).to(x.dtype))
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/detr/models/position_encoding.py", line 49, in forward
+    pos_x = torch.stack((pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), dim=4).flatten(3)
+KeyboardInterrupt

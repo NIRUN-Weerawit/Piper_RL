@@ -1,0 +1,14 @@
+Found 0 hdf5 files
+Data from: ['/media/ucluser/Extreme SSD/datasets_1/seed_10']
+- Train on [0] episodes
+- Test on [0] episodes
+Traceback (most recent call last):
+  File "imitate_episodes.py", line 579, in <module>
+    main(vars(parser.parse_args()))
+  File "imitate_episodes.py", line 169, in main
+    train_dataloader, val_dataloader, stats, _ = load_data(dataset_dir, name_filter, camera_names, batch_size_train, batch_size_val, args['chunk_size'], args['skip_mirrored_data'], config['load_pretrain'], policy_class, stats_dir_l=stats_dir, sample_weights=sample_weights, train_ratio=train_ratio)
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/utils.py", line 237, in load_data
+    _, all_episode_len = get_norm_stats(dataset_path_list)
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/utils.py", line 165, in get_norm_stats
+    all_qpos_data = torch.cat(all_qpos_data, dim=0)
+RuntimeError: torch.cat(): expected a non-empty list of Tensors

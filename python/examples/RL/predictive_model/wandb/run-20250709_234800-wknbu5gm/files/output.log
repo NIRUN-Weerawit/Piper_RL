@@ -1,0 +1,27 @@
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=ResNet18_Weights.IMAGENET1K_V1`. You can also use `weights=ResNet18_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+  0%|                                                                                                                                                 | 0/51 [00:00<?, ?it/s]
+Found 53 hdf5 files
+Data from: ['datasets/seed_9']
+- Train on [52] episodes
+- Test on [1] episodes
+Found 53 hdf5 files
+Norm stats from: ['datasets/seed_9']
+Initializing transformations
+Initializing transformations
+Augment images: False, train_num_workers: 2, val_num_workers: 2
+Use VQ: False, None, None
+number of parameters: 44.08M
+KL Weight 10
+validating
+  0%|                                                                                                                                                 | 0/51 [00:12<?, ?it/s]
+Traceback (most recent call last):
+  File "imitate_episodes.py", line 668, in <module>
+    main(vars(parser.parse_args()))
+  File "imitate_episodes.py", line 172, in main
+    best_ckpt_info = train_bc(train_dataloader, val_dataloader, config)
+  File "imitate_episodes.py", line 588, in train_bc
+    summary_string += f'{k}: {v.item():.3f} '
+AttributeError: 'int' object has no attribute 'item'

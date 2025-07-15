@@ -1,0 +1,1240 @@
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=ResNet18_Weights.IMAGENET1K_V1`. You can also use `weights=ResNet18_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+imitate_episodes.py:464: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  loading_status = policy.deserialize(torch.load(config['resume_ckpt_path']))
+  0%|                                                       | 0/87501 [00:00<?, ?it/s]
+Found 406 hdf5 files
+Data from: ['/media/ucluser/Extreme SSD/datasets_1/seed_11']
+- Train on [401] episodes
+- Test on [5] episodes
+Found 406 hdf5 files
+Norm stats from: ['/media/ucluser/Extreme SSD/datasets_1/seed_11']
+Initializing transformations
+Initializing transformations
+Augment images: False, train_num_workers: 2, val_num_workers: 2
+Use VQ: False, None, None
+number of parameters: 77.32M
+KL Weight 10
+Resume policy from: checkpoint_16_01/policy_step_12500_seed_9.ckpt, Status: <All keys matched successfully>
+
+  0%|                                           | 1/87501 [00:12<303:48:40, 12.50s/it]
+Val loss:   0.24348
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  3%|█▏                                       | 2499/87501 [25:18<14:12:22,  1.66it/s]
+
+  3%|█▏                                       | 2500/87501 [25:19<14:12:05,  1.66it/s]
+Val loss:   0.27966
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  4%|█▋                                       | 3707/87501 [37:36<13:59:53,  1.66it/s]Traceback (most recent call last):
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/utils.py", line 68, in __getitem__
+    image_dict[cam_name] = root[f'/images/{cam_name}'][start_ts]
+  File "h5py/_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py/_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/h5py/_hl/dataset.py", line 758, in __getitem__
+    return self._fast_reader.read(args)
+  File "h5py/_selector.pyx", line 376, in h5py._selector.Reader.read
+OSError: [Errno 5] Can't synchronously read data (file read failed: time = Tue Jul 15 03:33:17 2025
+, filename = '/media/ucluser/Extreme SSD/datasets_1/seed_11/episode_341.hdf5', file descriptor = 62, errno = 5, error message = 'Input/output error', buf = 0x5cc1d8de1620, total read size = 921600, bytes this sub-read = 921600, bytes actually read = 18446744073709551615, offset = 0)
+Traceback (most recent call last):
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/utils.py", line 68, in __getitem__
+    image_dict[cam_name] = root[f'/images/{cam_name}'][start_ts]
+  File "h5py/_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py/_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/h5py/_hl/dataset.py", line 758, in __getitem__
+    return self._fast_reader.read(args)
+  File "h5py/_selector.pyx", line 376, in h5py._selector.Reader.read
+OSError: [Errno 5] Can't synchronously read data (file read failed: time = Tue Jul 15 03:33:17 2025
+, filename = '/media/ucluser/Extreme SSD/datasets_1/seed_11/episode_14.hdf5', file descriptor = 66, errno = 5, error message = 'Input/output error', buf = 0x5cc1d8de16a0, total read size = 921600, bytes this sub-read = 921600, bytes actually read = 18446744073709551615, offset = 0)
+  4%|█▋                                       | 3707/87501 [38:49<14:37:41,  1.59it/s]
+Traceback (most recent call last):
+  File "imitate_episodes.py", line 580, in <module>
+    main(vars(parser.parse_args()))
+  File "imitate_episodes.py", line 177, in main
+    best_ckpt_info = train_bc(train_dataloader, val_dataloader, config)
+  File "imitate_episodes.py", line 516, in train_bc
+    data = next(train_dataloader)
+  File "imitate_episodes.py", line 541, in repeater
+    for data in loader:
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 630, in __next__
+    data = self._next_data()
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 1344, in _next_data
+    return self._process_data(data)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 1370, in _process_data
+    data.reraise()
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/_utils.py", line 706, in reraise
+    raise exception
+OSError: Caught OSError in DataLoader worker process 1.
+Original Traceback (most recent call last):
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/utils/data/_utils/worker.py", line 309, in _worker_loop
+    data = fetcher.fetch(index)  # type: ignore[possibly-undefined]
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/utils/data/_utils/fetch.py", line 52, in fetch
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torch/utils/data/_utils/fetch.py", line 52, in <listcomp>
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/utils.py", line 138, in __getitem__
+    raise e  # re-raise to stop execution
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/utils.py", line 68, in __getitem__
+    image_dict[cam_name] = root[f'/images/{cam_name}'][start_ts]
+  File "h5py/_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py/_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/h5py/_hl/dataset.py", line 758, in __getitem__
+    return self._fast_reader.read(args)
+  File "h5py/_selector.pyx", line 376, in h5py._selector.Reader.read
+OSError: [Errno 5] Can't synchronously read data (file read failed: time = Tue Jul 15 03:33:17 2025
+, filename = '/media/ucluser/Extreme SSD/datasets_1/seed_11/episode_14.hdf5', file descriptor = 66, errno = 5, error message = 'Input/output error', buf = 0x5cc1d8de16a0, total read size = 921600, bytes this sub-read = 921600, bytes actually read = 18446744073709551615, offset = 0)
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/utils.py", line 53, in __getitem__
+    with h5py.File(dataset_path, 'r') as root:
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/utils.py", line 53, in __getitem__
+    with h5py.File(dataset_path, 'r') as root:
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/h5py/_hl/files.py", line 562, in __init__
+    fid = make_fid(name, mode, userblock_size, fapl, fcpl, swmr=swmr)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/h5py/_hl/files.py", line 562, in __init__
+    fid = make_fid(name, mode, userblock_size, fapl, fcpl, swmr=swmr)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/h5py/_hl/files.py", line 235, in make_fid
+    fid = h5f.open(name, flags, fapl=fapl)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/h5py/_hl/files.py", line 235, in make_fid
+    fid = h5f.open(name, flags, fapl=fapl)
+  File "h5py/_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py/_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py/_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "h5py/_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "h5py/h5f.pyx", line 102, in h5py.h5f.open
+  File "h5py/h5f.pyx", line 102, in h5py.h5f.open
+OSError: [Errno 5] Unable to synchronously open file (file read failed: time = Tue Jul 15 03:33:17 2025
+, filename = '/media/ucluser/Extreme SSD/datasets_1/seed_11/episode_43.hdf5', file descriptor = 62, errno = 5, error message = 'Input/output error', buf = 0x7ffda21b7138, total read size = 8, bytes this sub-read = 8, bytes actually read = 18446744073709551615, offset = 0)
+OSError: [Errno 5] Unable to synchronously open file (file read failed: time = Tue Jul 15 03:33:17 2025
+, filename = '/media/ucluser/Extreme SSD/datasets_1/seed_11/episode_185.hdf5', file descriptor = 66, errno = 5, error message = 'Input/output error', buf = 0x7ffda21b7138, total read size = 8, bytes this sub-read = 8, bytes actually read = 18446744073709551615, offset = 0)
+Traceback (most recent call last):
+  File "/home/ucluser/isaacgym/python/examples/RL/predictive_model/utils.py", line 53, in __getitem__
+    with h5py.File(dataset_path, 'r') as root:
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/h5py/_hl/files.py", line 562, in __init__
+    fid = make_fid(name, mode, userblock_size, fapl, fcpl, swmr=swmr)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/h5py/_hl/files.py", line 235, in make_fid
+    fid = h5f.open(name, flags, fapl=fapl)
+  File "h5py/_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py/_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "h5py/h5f.pyx", line 102, in h5py.h5f.open
+OSError: [Errno 5] Unable to synchronously open file (file read failed: time = Tue Jul 15 03:33:17 2025
+, filename = '/media/ucluser/Extreme SSD/datasets_1/seed_11/episode_41.hdf5', file descriptor = 66, errno = 5, error message = 'Input/output error', buf = 0x7ffda21b7138, total read size = 8, bytes this sub-read = 8, bytes actually read = 18446744073709551615, offset = 0)
+Error loading /media/ucluser/Extreme SSD/datasets_1/seed_11/episode_14.hdf5 in __getitem__
+Error loading /media/ucluser/Extreme SSD/datasets_1/seed_11/episode_341.hdf5 in __getitem__
+Error loading /media/ucluser/Extreme SSD/datasets_1/seed_11/episode_43.hdf5 in __getitem__
+Error loading /media/ucluser/Extreme SSD/datasets_1/seed_11/episode_185.hdf5 in __getitem__
+Error loading /media/ucluser/Extreme SSD/datasets_1/seed_11/episode_41.hdf5 in __getitem__

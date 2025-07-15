@@ -1,0 +1,339 @@
+Found 53 hdf5 files
+Data from: ['datasets/seed_9']
+- Train on [52] episodes
+- Test on [1] episodes
+Found 53 hdf5 files
+Norm stats from: ['datasets/seed_9']
+Initializing transformations
+Initializing transformations
+Augment images: False, train_num_workers: 2, val_num_workers: 2
+Use VQ: False, None, None
+number of parameters: 44.07M
+KL Weight 10
+validating
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=ResNet18_Weights.IMAGENET1K_V1`. You can also use `weights=ResNet18_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+  0%|                                                                                                                                      | 0/20001 [00:00<?, ?it/s]
+Val loss:   78.00100
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  2%|███                                                                                                                       | 495/20001 [02:43<1:42:31,  3.17it/s]
+
+  2%|███                                                                                                                       | 500/20001 [02:44<1:42:26,  3.17it/s]
+Val loss:   0.34716
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  5%|██████                                                                                                                    | 997/20001 [05:27<1:39:50,  3.17it/s]
+
+  5%|██████                                                                                                                   | 1000/20001 [05:28<1:39:46,  3.17it/s]
+Val loss:   0.16235
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  7%|█████████                                                                                                                | 1500/20001 [08:11<1:37:09,  3.17it/s]
+validating
+Val loss:   0.13355
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  9%|██████████▉                                                                                                              | 1806/20001 [09:54<1:39:49,  3.04it/s]
+Traceback (most recent call last):
+  File "imitate_episodes.py", line 580, in <module>
+    main(vars(parser.parse_args()))
+  File "imitate_episodes.py", line 176, in main
+    best_ckpt_info = train_bc(train_dataloader, val_dataloader, config)
+  File "imitate_episodes.py", line 521, in train_bc
+    wandb.log(forward_dict, step=step) # not great, make training 1-2% slower
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/wandb/sdk/wandb_run.py", line 256, in wrapper
+    return func(self, *args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/wandb/sdk/wandb_run.py", line 222, in wrapper
+    return func(self, *args, **kwargs)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/wandb/sdk/wandb_run.py", line 1543, in log
+    self._log(data=data, step=step, commit=commit)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/wandb/sdk/wandb_run.py", line 1334, in _log
+    self._partial_history_callback(data, step, commit)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/wandb/sdk/wandb_run.py", line 1223, in _partial_history_callback
+    self._backend.interface.publish_partial_history(
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/wandb/sdk/interface/interface.py", line 553, in publish_partial_history
+    self._publish_partial_history(partial_history)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/wandb/sdk/interface/interface_shared.py", line 62, in _publish_partial_history
+    self._publish(rec)
+  File "/home/ucluser/miniconda3/envs/isaacgym/lib/python3.8/site-packages/wandb/sdk/interface/interface_queue.py", line 49, in _publish
+    raise Exception("The wandb backend process has shutdown")
+Exception: The wandb backend process has shutdown
