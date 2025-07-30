@@ -57,12 +57,13 @@ class DETRVAE(nn.Module):
         self.query_embed = nn.Embedding(num_queries, hidden_dim)
         if backbones is not None:
             self.input_proj = nn.Conv2d(backbones[0].num_channels, hidden_dim, kernel_size=1)
+            # print(f"backbone body = {backbones[0].body}")
             self.backbones = nn.ModuleList(backbones)
             self.input_proj_robot_state = nn.Linear(state_dim, hidden_dim)
         else:
             # input_dim = 14 + 7 # robot_state + env_state
             self.input_proj_robot_state = nn.Linear(state_dim, hidden_dim)
-            self.input_proj_env_state = nn.Linear(7, hidden_dim)
+            self.input_proj_env_state = nn.Linear(state_dim, hidden_dim)
             self.pos = torch.nn.Embedding(2, hidden_dim)
             self.backbones = None
 
@@ -269,12 +270,12 @@ def build_encoder(args):
 
 
 def build(args):
-    state_dim = 8 # TODO hardcode
-
+    state_dim = args.state_dim # TODO hardcode
+    print(f"args= {args}")
     # From state
     # backbone = None # from state for now, no need for conv nets
     # From image
-    backbones = []
+    backbones = []  
     for _ in args.camera_names:
         backbone = build_backbone(args)
         backbones.append(backbone)
@@ -305,7 +306,7 @@ def build(args):
     return model
 
 def build_cnnmlp(args):
-    state_dim = 8 # TODO hardcode
+    state_dim = args.state_dim # TODO hardcode
 
     # From state
     # backbone = None # from state for now, no need for conv nets

@@ -68,7 +68,10 @@ class BackboneBase(nn.Module):
             return_layers = {"layer1": "0", "layer2": "1", "layer3": "2", "layer4": "3"}
         else:
             return_layers = {'layer4': "0"}
-        self.body = IntermediateLayerGetter(backbone, return_layers=return_layers)
+        resnet      = IntermediateLayerGetter(backbone, return_layers=return_layers)
+        
+        self.body   = self.widen_first_conv(resnet, 4)
+        
         self.num_channels = num_channels
 
     def forward(self, tensor):
@@ -82,6 +85,26 @@ class BackboneBase(nn.Module):
         #     out[name] = NestedTensor(x, mask)
         # return out
 
+    def widen_first_conv(self, resnet, new_in=4):
+        """
+        Replace conv1 to accept `new_in` channels but keep pretrained
+        weights for RGB and initialise the extra channel sensibly.
+        """
+        old_conv = resnet.conv1
+        new_conv = nn.Conv2d(new_in,
+                            old_conv.out_channels,
+                            kernel_size=old_conv.kernel_size,
+                            stride=old_conv.stride,
+                            padding=old_conv.padding,
+                            bias=old_conv.bias is not None)
+
+        # copy RGB weights
+        new_conv.weight.data[:, :3] = old_conv.weight.data
+        # init depth channel as mean of RGB (or Kaiming / zeros)
+        new_conv.weight.data[:, 3]  = old_conv.weight.data.mean(1)
+
+        resnet.conv1 = new_conv
+        return resnet
 
 class Backbone(BackboneBase):
     """ResNet backbone with frozen BatchNorm."""
@@ -113,10 +136,11 @@ class Joiner(nn.Sequential):
 
 
 def build_backbone(args):
-    position_embedding = build_position_encoding(args)
-    train_backbone = args.lr_backbone > 0
-    return_interm_layers = args.masks
-    backbone = Backbone(args.backbone, train_backbone, return_interm_layers, args.dilation)
-    model = Joiner(backbone, position_embedding)
-    model.num_channels = backbone.num_channels
+    position_embedding      = build_position_encoding(args)
+    train_backbone          = args.lr_backbone > 0
+    return_interm_layers    = args.masks
+    backbone                = Backbone(args.backbone, train_backbone, return_interm_layers, args.dilation)
+    model                   = Joiner(backbone, position_embedding)
+    model.num_channels      = backbone.num_channels
+    model.body              = backbone.body
     return model

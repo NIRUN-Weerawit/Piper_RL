@@ -53,32 +53,47 @@ def get_args_parser():
                         help="Train segmentation head if the flag is provided")
 
     # repeat args in imitate_episodes just to avoid error. Will not be used
+
     parser.add_argument('--eval',               action='store_true')
     parser.add_argument('--onscreen_render',    action='store_true')
-    parser.add_argument('--ckpt_dir',           action='store', type=str, help='ckpt_dir',                  required=True)
-    parser.add_argument('--policy_class',       action='store', type=str, default= 'ACT' ,help='policy_class, capitalize',  required=False)
-    parser.add_argument('--task_name',          action='store', type=str, help='task_name',                 required=True)
-    parser.add_argument('--seed',               action='store', type=int, help='seed',                      required=True)
-    parser.add_argument('--num_steps',          action='store', type=int, help='num_epochs',                required=True)
-    parser.add_argument('--kl_weight',          action='store', type=int, help='KL Weight',                 required=False)
-    parser.add_argument('--chunk_size',         action='store', type=int, help='chunk_size',                required=False)
-    parser.add_argument('--temporal_agg',       action='store_true')
-    
-    parser.add_argument('--use_vq',             action='store_true')
-    parser.add_argument('--vq_class',           action='store', type=int, help='vq_class',                  required=False)
-    parser.add_argument('--vq_dim',             action='store', type=int, help='vq_dim',                    required=False)
-    parser.add_argument('--load_pretrain',      action='store_true',                                        default=False)
-    parser.add_argument('--action_dim',         action='store', type=int,                                   required=False)
-    parser.add_argument('--eval_every',         action='store', type=int, default=500, help='eval_every',   required=False)
-    parser.add_argument('--validate_every',     action='store', type=int, default=500, help='validate_every', required=False)
-    parser.add_argument('--save_every',         action='store', type=int, default=500, help='save_every',   required=False)
-    parser.add_argument('--resume_ckpt_path',   action='store', type=str, help='load_ckpt_path',            required=False)
-    parser.add_argument('--no_encoder',         action='store_true')
-    parser.add_argument('--skip_mirrored_data', action='store_true')
-    parser.add_argument('--actuator_network_dir', action='store', type=str, help='actuator_network_dir',    required=False)
+    parser.add_argument('--ckpt_dir',           action='store', type=str,   required=False,                      help='ckpt_dir')
+    parser.add_argument('--policy_class',       action='store', type=str,   required=False,      default="ACT",  help='policy_class, capitalize')
+    parser.add_argument('--task_name',          action='store', type=str,   required=False,                      help='task_name')
+    # parser.add_argument('--batch_size',         action='store', type=int,   required=True,                      help='batch_size')
+    parser.add_argument('--seed',               action='store', type=int,   required=False,                      help='seed')
+    parser.add_argument('--num_steps',          action='store', type=int,   required=False,                      help='num_steps')
+    # parser.add_argument('--lr',                 action='store', type=float, required=True,                      help='lr')
+    parser.add_argument('--load_pretrain',      action='store_true',                            default=False)
+    parser.add_argument('--eval_every',         action='store', type=int,   required=False,     default=100000, help='eval_every', )
+    parser.add_argument('--validate_every',     action='store', type=int,   required=False,     default=2500,   help='validate_every', )
+    parser.add_argument('--save_every',         action='store', type=int,   required=False,     default=2500,   help='save_every', )
+    parser.add_argument('--resume_ckpt_path',   action='store', type=str,   required=False,                     help='resume_ckpt_path', )
+    parser.add_argument('--skip_mirrored_data', action='store_true')                      ,     
+    parser.add_argument('--actuator_network_dir', action='store', type=str, required=False,                     help='actuator_network_dir', )
     parser.add_argument('--history_len',        action='store', type=int)
     parser.add_argument('--future_len',         action='store', type=int)
     parser.add_argument('--prediction_len',     action='store', type=int)
+
+    # for ACT
+    parser.add_argument('--kl_weight',          action='store', type=int,   required=False,     default=10,     help='KL Weight',       )
+    parser.add_argument('--chunk_size',         action='store', type=int,   required=False,     default= 25,     help='chunk_size',      )
+    # parser.add_argument('--hidden_dim',         action='store', type=int,   required=False,     default=512,    help='hidden_dim',      )
+    # parser.add_argument('--dim_feedforward',    action='store', type=int,   required=False,     default=2048,   help='dim_feedforward', )
+    parser.add_argument('--temporal_agg',       action='store_true')
+    parser.add_argument('--use_vq',             action='store_true')
+    parser.add_argument('--vq_class',           action='store', type=int,   help='vq_class')
+    parser.add_argument('--vq_dim',             action='store', type=int,   help='vq_dim')
+    parser.add_argument('--no_encoder',         action='store_true')
+    
+    # for Isaacgym
+    parser.add_argument('--num_envs',          action='store', type=int,   required=False,     default=1,     help='KL Weight',       )
+    parser.add_argument('--num_box',          action='store', type=int,   required=False,     default=1,     help='KL Weight',       )
+    parser.add_argument('--sim_device',          action='store', type=str,   required=False,     default="cpu",           )
+    parser.add_argument('--headless',          action='store', type=bool,   required=False,     default=False,           )
+    parser.add_argument('--record',          action='store',  type=bool,    default= False,     help= "Set random seed for the simulation" )
+    parser.add_argument('--alpha',          action='store',  type=float,    default= 0.0,     help= "Set random seed for the simulation" )
+    parser.add_argument('--topic',          action='store', type=str,   required=False,     )
+    parser.add_argument('--temp',          action='store',  type=bool,    default= False,     help= "Set random seed for the simulation" )
     
     return parser
 

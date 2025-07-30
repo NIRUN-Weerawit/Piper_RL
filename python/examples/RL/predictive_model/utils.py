@@ -56,21 +56,27 @@ class EpisodicDataset(torch.utils.data.Dataset):
                 except:
                     is_sim = False
                 compressed = root.attrs.get('compress', False)
-                action = root['/action'][()]
+                action = root['/actions'][()]
                 original_action_shape = action.shape
                 episode_len = original_action_shape[0]
                 # get observation at start_ts only
-                qpos = root['/observations/qpos'][start_ts]
+                obs = root['/observations'][start_ts]
                 # qvel = root['/observations/qvel'][start_ts]
-                image_dict = dict()
+                image_dict  = dict()
+                depth_dict  = dict()
+                
                 for cam_name in self.camera_names:
                     # print("cam:", cam_name)
-                    image_dict[cam_name] = root[f'/images/{cam_name}'][start_ts]
+                    image_dict[cam_name] = root[f'/images/colors/{cam_name}'][start_ts]
+                    depth_dict[cam_name] = root[f'/images/depths/{cam_name}'][start_ts]
                 if compressed:
                     for cam_name in image_dict.keys():
                         decompressed_image      = cv2.imdecode(image_dict[cam_name], 1)
                         image_dict[cam_name]    = np.array(decompressed_image)
-                
+                        decompressed_depth      = cv2.imdecode(depth_dict[cam_name], 1)
+                        depth_dict[cam_name]    = np.array(decompressed_depth)
+
+
                 # get all actions after and including start_ts
                 if is_sim:
                     action = action[start_ts:]
@@ -89,19 +95,40 @@ class EpisodicDataset(torch.utils.data.Dataset):
             is_pad = is_pad[:self.chunk_size]
 
             # new axis for different cameras
-            all_cam_images = []
+            all_cam_images  = []
+            all_cam_depths  = []
+            # depth_means     = []
+            # depth_stds      = []
             for cam_name in self.camera_names:
                 all_cam_images.append(image_dict[cam_name])
-            all_cam_images = np.stack(all_cam_images, axis=0)
+                depth_dict[cam_name] = (np.array(depth_dict[cam_name])  - self.norm_stats[f"depth_mean_{cam_name}"]) / self.norm_stats[f"depth_std_{cam_name}"]
+                all_cam_depths.append(depth_dict[cam_name])
+                # depth_means.append(np.array(depth_dict[cam_name]).flatten().mean(dim=[0]).float())
+                # depth_stds.append(torch.clip(np.array(depth_dict[cam_name]).flatten().std(dim=[0]).float(), 1e-2, np.inf))
+                        
+            
+            all_cam_images  = np.stack(all_cam_images,  axis=0)
+            all_cam_depths  = np.stack(all_cam_depths,  axis=0)
+            # depth_mean      = np.array(all_cam_depths).flatten().mean()
+            # depth_std       = np.clip(np.array(all_cam_depths).flatten().std(), 1e-2, np.inf)
 
+                
+            # depth_image = torch.from_numpy(depth_image).float().cuda().unsqueeze(1).unsqueeze(0)
+            # depth_means     = np.stack(depth_means,     axis=0).reshape(-1,1,1,1)
+            # depth_stds      = np.stack(depth_stds,      axis=0).reshape(-1,1,1,1)
+            # all_cam_depths  = (all_cam_depths - depth_means) / depth_stds   #normalize the depth information each camera differently
+            # all_cam_depths  = (all_cam_depths - depth_mean) / depth_std     #normalize the depth information each camera the same way
+            
             # construct observations
-            image_data = torch.from_numpy(all_cam_images)
-            qpos_data = torch.from_numpy(qpos).float()
+            image_data  = torch.from_numpy(all_cam_images)
+            depth_data  = torch.from_numpy(all_cam_depths).unsqueeze(-1)
+            obs_data   = torch.from_numpy(obs).float()
             action_data = torch.from_numpy(padded_action).float()
-            is_pad = torch.from_numpy(is_pad).bool()
-
+            is_pad      = torch.from_numpy(is_pad).bool()
+            
             # channel last
             image_data = torch.einsum('k h w c -> k c h w', image_data)
+            depth_data = torch.einsum('k h w c -> k c h w', depth_data)
 
             # augmentation
             if self.transformations is None:
@@ -121,15 +148,16 @@ class EpisodicDataset(torch.utils.data.Dataset):
 
             # normalize image and change dtype to float
             image_data = image_data / 255.0
-
+           
             if self.policy_class == 'Diffusion':
                 # normalize to [-1, 1]
                 action_data = ((action_data - self.norm_stats["action_min"]) / (self.norm_stats["action_max"] - self.norm_stats["action_min"])) * 2 - 1
             else:
                 # normalize to mean 0 std 1
                 action_data = (action_data - self.norm_stats["action_mean"]) / self.norm_stats["action_std"]
-
-            qpos_data = (qpos_data - self.norm_stats["qpos_mean"]) / self.norm_stats["qpos_std"]
+            
+            visual_data = torch.concatenate([image_data, depth_data], axis = 1)
+            obs_data = (obs_data - self.norm_stats["obs_mean"]) / self.norm_stats["obs_std"]
 
         except Exception as e:
             print(f"Error loading {dataset_path} in __getitem__")
@@ -140,51 +168,111 @@ class EpisodicDataset(torch.utils.data.Dataset):
             print(f'Error loading {dataset_path} in __getitem__')
             quit()"""
 
-        # print(image_data.dtype, qpos_data.dtype, action_data.dtype, is_pad.dtype)
-        return image_data, qpos_data, action_data, is_pad
+        # print(image_data.dtype, obs_data.dtype, action_data.dtype, is_pad.dtype)
+        return visual_data, obs_data, action_data, is_pad
 
 
-def get_norm_stats(dataset_path_list):
-    all_qpos_data = []
+def get_norm_stats(dataset_path_list, short: bool ):
+    # all_qpos_data   = []
+    all_obs_data = []
     all_action_data = []
     all_episode_len = []
+    all_depths_data = dict()
+    depth_running_sum     = dict()
+    depth_running_sq_sum  = dict()
+    depth_count           = dict()
+    if short: 
+        for dataset_path in dataset_path_list:
+            try:
+                with h5py.File(dataset_path, 'r') as root:
+                    obs    = root['/observations'][()]
+            except Exception as e:
+                print(f'Error loading observations from {dataset_path} in get_norm_stats')
+                print(e)
+                quit()
+            all_episode_len.append(len(obs))
+            stats = None
+        
+    else:
+        for dataset_path in dataset_path_list:
+            try:
+                with h5py.File(dataset_path, 'r') as root:
+                    obs    = root['/observations'][()]
+                    actions  = root['/actions'][()]    
+                    
+                    for cam in root['/images/depths'].keys():
+                        # if cam not in all_depths_data:
+                            # all_depths_data[cam] = []
+                        # all_depths_data[cam].append(root[f'/depths/{cam}'][()])
+                        depth = root[f'/images/depths/{cam}'][()]
+                        if cam not in depth_running_sum:
+                            depth_running_sum[cam]      = 0
+                            depth_running_sq_sum[cam]   = 0
+                            depth_count[cam]            = 0
+                        depth_running_sum[cam]    += depth.sum()
+                        depth_running_sq_sum[cam] += (depth ** 2).sum()
+                        depth_count[cam]          += depth.size 
+                    # print(f"depth: type={type(depth)}, shape={depth.shape}, size={depth.size}")
+                    
+                        
+                        
+            except Exception as e:
+                print(f'Error loading action and/or depth info from {dataset_path} in get_norm_stats')
+                print(e)
+                quit()
+            # all_qpos_data.append(torch.from_numpy(qpos))
+            all_obs_data.append(torch.from_numpy(obs))
+            all_action_data.append(torch.from_numpy(actions))
+            all_episode_len.append(len(obs))
+            
+        # all_qpos_data   = torch.cat(all_qpos_data,  dim=0)
+        all_obs_data   = torch.cat(all_obs_data,  dim=0)
+        all_action_data = torch.cat(all_action_data,dim=0)
+        
+        """depth_means     = {}
+        depth_stds      = {}
+        for cam, depth_list in all_depths_data.items():
+            depth_combined      = np.concatenate(depth_list, axis = 0)
+            depth_tensor        = torch.from_numpy(depth_combined)
+            depth_means[cam]    = depth_tensor.mean().float()
+            stds                = depth_tensor.std().float()
+            depth_stds[cam]     = torch.clip(stds, 1e-2, np.inf)"""
+        
+        # normalize action data
+        action_mean     = all_action_data.mean(dim=[0]).float()
+        action_std      = all_action_data.std(dim=[0]).float()
+        action_std      = torch.clip(action_std, 1e-2, np.inf) # clipping
 
-    for dataset_path in dataset_path_list:
-        try:
-            with h5py.File(dataset_path, 'r') as root:
-                qpos = root['/observations/qpos'][()]
-                # qvel = root['/observations/qvel'][()]
-                action = root['/action'][()]
-        except Exception as e:
-            print(f'Error loading {dataset_path} in get_norm_stats')
-            print(e)
-            quit()
-        all_qpos_data.append(torch.from_numpy(qpos))
-        all_action_data.append(torch.from_numpy(action))
-        all_episode_len.append(len(qpos))
-    all_qpos_data = torch.cat(all_qpos_data, dim=0)
-    all_action_data = torch.cat(all_action_data, dim=0)
+        # normalize observations data
+        obs_mean       = all_obs_data.mean(dim=[0]).float()
+        obs_std        = all_obs_data.std(dim=[0]).float()
+        obs_std        = torch.clip(obs_std, 1e-2, np.inf) # clipping
 
-    # normalize action data
-    action_mean = all_action_data.mean(dim=[0]).float()
-    action_std = all_action_data.std(dim=[0]).float()
-    action_std = torch.clip(action_std, 1e-2, np.inf) # clipping
+        action_min      = all_action_data.min(dim=0).values.float()
+        action_max      = all_action_data.max(dim=0).values.float()
 
-    # normalize qpos data
-    qpos_mean = all_qpos_data.mean(dim=[0]).float()
-    qpos_std = all_qpos_data.std(dim=[0]).float()
-    qpos_std = torch.clip(qpos_std, 1e-2, np.inf) # clipping
-
-    action_min = all_action_data.min(dim=0).values.float()
-    action_max = all_action_data.max(dim=0).values.float()
-
-    eps = 0.0001
-    stats = {"action_mean": action_mean.numpy(), "action_std": action_std.numpy(),
-             "action_min": action_min.numpy() - eps,"action_max": action_max.numpy() + eps,
-             "qpos_mean": qpos_mean.numpy(), "qpos_std": qpos_std.numpy(),
-             "example_qpos": qpos}
-
+        eps = 0.0001
+        stats = {"action_mean": action_mean.numpy(), 
+                "action_std": action_std.numpy(),
+                "action_min": action_min.numpy() - eps,
+                "action_max": action_max.numpy() + eps,
+                "obs_mean": obs_mean.numpy(),
+                "obs_std": obs_std.numpy()
+                }
+        
+        # normalize depth data        
+        for cam in depth_running_sum:
+            mean    = depth_running_sum[cam] / depth_count[cam]
+            var     = depth_running_sq_sum[cam] / depth_count[cam] - mean ** 2
+            std     = np.clip(np.sqrt(var), 1e-2, np.inf)
+            stats[f"depth_mean_{cam}"]  = mean 
+            stats[f"depth_std_{cam}"]   = std 
+            
+        print("#------------------------STATS--------------------------#")
+        print(stats)
+        print("#-------------------------------------------------------#")
     return stats, all_episode_len
+
 
 def find_all_hdf5(dataset_dir, skip_mirrored_data):
     hdf5_files = []
@@ -209,6 +297,7 @@ def BatchSampler(batch_size, episode_len_l, sample_weights):
         yield batch
 
 def load_data(dataset_dir_l, name_filter, camera_names, batch_size_train, batch_size_val, chunk_size, skip_mirrored_data=False, load_pretrain=False, policy_class=None, stats_dir_l=None, sample_weights=None, train_ratio=0.99):
+    dataset_dirr = dataset_dir_l
     if type(dataset_dir_l) == str:
         dataset_dir_l = [dataset_dir_l]
     dataset_path_list_list = [find_all_hdf5(dataset_dir, skip_mirrored_data) for dataset_dir in dataset_dir_l]
@@ -234,7 +323,7 @@ def load_data(dataset_dir_l, name_filter, camera_names, batch_size_train, batch_
     #     with open(os.path.join('/home/zfu/interbotix_ws/src/act/ckpts/pretrain_all', 'dataset_stats.pkl'), 'rb') as f:
     #         norm_stats = pickle.load(f)
     #     print('Loaded pretrain dataset stats')
-    _, all_episode_len = get_norm_stats(dataset_path_list)
+    _, all_episode_len = get_norm_stats(dataset_path_list, short=True)
     train_episode_len_l = [[all_episode_len[i] for i in train_episode_ids] for train_episode_ids in train_episode_ids_l]
     val_episode_len_l = [[all_episode_len[i] for i in val_episode_ids] for val_episode_ids in val_episode_ids_l]
     train_episode_len = flatten_list(train_episode_len_l)
@@ -244,8 +333,14 @@ def load_data(dataset_dir_l, name_filter, camera_names, batch_size_train, batch_
     elif type(stats_dir_l) == str:
         stats_dir_l = [stats_dir_l]
     
-    norm_stats, _ = get_norm_stats(flatten_list([find_all_hdf5(stats_dir, skip_mirrored_data) for stats_dir in stats_dir_l]))
-    print(f'Norm stats from: {stats_dir_l}')
+    # obtain normalization stats for qpos and action
+    if load_pretrain:
+        with open(os.path.join(dataset_dirr, 'dataset_stats.pkl'), 'rb') as f:
+            norm_stats = pickle.load(f)
+        print('Loaded pretrain dataset stats')
+    else:
+        norm_stats, _ = get_norm_stats(flatten_list([find_all_hdf5(stats_dir, skip_mirrored_data) for stats_dir in stats_dir_l]), short= False)
+        print(f'Norm stats from: {stats_dir_l}')
 
     batch_sampler_train = BatchSampler(batch_size_train, train_episode_len_l, sample_weights)
     batch_sampler_val = BatchSampler(batch_size_val, val_episode_len_l, None)
@@ -255,8 +350,8 @@ def load_data(dataset_dir_l, name_filter, camera_names, batch_size_train, batch_
     # construct dataset and dataloader
     train_dataset = EpisodicDataset(dataset_path_list, camera_names, norm_stats, train_episode_ids, train_episode_len, chunk_size, policy_class)
     val_dataset = EpisodicDataset(dataset_path_list, camera_names, norm_stats, val_episode_ids, val_episode_len, chunk_size, policy_class)
-    train_num_workers = (8 if os.getlogin() == 'zfu' else 16) if train_dataset.augment_images else 2
-    val_num_workers = 8 if train_dataset.augment_images else 2
+    train_num_workers = 5
+    val_num_workers = 5
     print(f'Augment images: {train_dataset.augment_images}, train_num_workers: {train_num_workers}, val_num_workers: {val_num_workers}')
     train_dataloader = DataLoader(train_dataset, batch_sampler=batch_sampler_train, pin_memory=True, num_workers=train_num_workers, prefetch_factor=2)
     val_dataloader = DataLoader(val_dataset, batch_sampler=batch_sampler_val, pin_memory=True, num_workers=val_num_workers, prefetch_factor=2)
